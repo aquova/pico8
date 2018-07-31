@@ -7,16 +7,19 @@ __lua__
 -- todo
 -- fix shooting across oob
 -- explosion sprites
--- slow startup
--- moving sfx
+-- moving sfx?
+-- title music
 -- roaming enemies
--- move diagonally
+-- opening/closing base vunerabilities?
+-- high scores
 
 function _init()
  frames=0
  screen=128
  mapsize=4*screen
- shipspd=2
+ shipaccel=0.1
+ maxshipspd=2
+ moving=false
  bulletspeed=3
  -- states:
  -- 0 - title screen
@@ -34,6 +37,9 @@ function _init()
  enemies={}
  lives=3
  blinkspeed=5
+ countdown=false
+	dying=false
+	transition=false
  titleparticles={}
  particlenum=50
  for _=0,particlenum do
@@ -42,33 +48,71 @@ function _init()
  	add(titleparticles,p)
  end
  nextlevel()
+ music(0)
 end
 
 function update_main()
- if btn(0) then
-  ship.direc=0
- elseif btn(1) then
-  ship.direc=1
- elseif btn(2) then
-  ship.direc=2
- elseif btn(3) then
-  ship.direc=3
+ if dying then
+		if (frames-deathframe) < 25 then
+			if ship.direc==0 then ship.x-=ship.spd
+ 		elseif ship.direc==1 then ship.x+=ship.spd
+ 		elseif ship.direc==2 then ship.y-=ship.spd
+ 		elseif ship.direc==3 then ship.y+=ship.spd end
+ 	else
+ 		ship.x, ship.y=startx, starty
+ 		ship.spd=0
+ 		dying=false
+ 		moving=false
+ 		if lives==0 then
+ 			state=3
+ 		end
+ 	end
+ 	return
  end
 
+	if transition then
+		moving=false
+		ship.spd=0
+		bullets={}
+		enemybullets={}
+		if btnp(4) or btnp(5) then
+			transition=false
+			nextlevel()		
+		end
+		return
+	end
+ 
+ if btn(0) then
+  ship.direc=0
+  moving=true
+ elseif btn(1) then
+  ship.direc=1
+ 	moving=true
+ elseif btn(2) then
+  ship.direc=2
+  moving=true
+ elseif btn(3) then
+  ship.direc=3
+  moving=true
+ end
+
+	if moving then
+		ship.spd=mid(0,ship.spd+shipaccel,maxshipspd)
+ end
  if ship.direc==0 then
-  ship.x-=shipspd
+  ship.x-=ship.spd
   ship.sprt=2
   ship.flp=true
  elseif ship.direc==1 then
-  ship.x+=shipspd
+  ship.x+=ship.spd
   ship.sprt=2
   ship.flp=false
  elseif ship.direc==2 then
-  ship.y-=shipspd
+  ship.y-=ship.spd
   ship.sprt=1
   ship.flp=false
  else
-  ship.y+=shipspd
+  ship.y+=ship.spd
   ship.sprt=1
   ship.flp=true
  end
@@ -80,7 +124,7 @@ function update_main()
  if btnp(5) then
   if count(bullets)<bulletlimit then
    add(bullets,newbullet())
-   b=newbullet()
+   local b=newbullet()
    b.direc=1
    add(bullets,b)
    sfx(1)
@@ -126,7 +170,7 @@ function update_main()
  end
 
  if #enemies==0 then
-  nextlevel()
+  transition=true
  end
  cam.x=ship.x-(screen/2)
  cam.y=ship.y-(screen/2)
@@ -143,7 +187,19 @@ function update_title()
 	end
 	
  if btnp(5) then
-  state=1
+ 	flashframe=0
+ 	blinkspeed=1
+ 	countdown=true
+ 	sfx(2)
+ end
+ 
+ if countdown then
+		flashframe+=1
+		if flashframe>=30 then
+			state=1
+			countdown=false
+			music(-1,300)
+		end 	
  end
 end
 
@@ -176,15 +232,25 @@ function _draw()
  if state==0 then
   titlescreen()
  elseif state==2 then
-  print("paused",cam.x+57,cam.y+55,8)
+ 	rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,13)
+ 	fancytext("paused",cam.x+57,cam.y+52,10,8)
  elseif state==3 then
-  print("game over",cam.x+centertext("game over"),cam.y+52,9)
+ 	rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
+  fancytext("game over",cam.x+centertext("game over"),cam.y+50,7,5)
   local score="final score: "..score
-  print(score,cam.x+centertext(score),cam.y+72,9)
+  fancytext(score,cam.x+centertext(score),cam.y+62,7,5)
+  fancytext("press ❎ or 🅾️ to continue",cam.x+centertext("press ❎ or 🅾️ to continue"),cam.y+74,7,5)
  else
   cls()
   drawmap()
-  spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
+		if transition then
+			rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
+			fancytext("level complete!",cam.x+centertext("level complete!"),cam.y+(screen/2),7,5)
+		elseif not dying then
+  	spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
+		else
+			spr(17,ship.x,ship.y)
+		end
 
   for bullet in all(bullets) do
    bullet:draw()
@@ -206,7 +272,7 @@ function nextlevel()
  reload()
  setobstacles()
  setenemies()
- ship={x=startx,y=starty,direc=2,sprt=1,flp=false}
+ ship={x=startx,y=starty,spd=0,direc=2,sprt=1,flp=false}
 end
 
 function setobstacles()
@@ -226,25 +292,37 @@ function setobstacles()
 end
 
 function setenemies()
- local enemynum=rnd(5)+3
+ local enemynum=flr(rnd(5))+3
  for i=0,enemynum do
   local e={}
-  repeat
-   e.x=flr(rnd(mapsize/8))
-  until ((e.x>startx) or ((e.x-2)<startx)) and e.x<((mapsize/8)-2)
-
-  repeat
-   e.y=flr(rnd(mapsize/8))
-  until ((e.y>starty) or ((e.y-2)<starty)) and e.y<((mapsize/8)-2)
-
+		-- ensure enemy isn't drawn on player
+  -- lua has no continue keyword, use a goto
+		::retry::
+ 	e.x=flr(rnd((mapsize/8)-2))
+ 	e.y=flr(rnd((mapsize/8)-2))
+  	
+ 	-- check distances, ensure new enemies are
+ 	-- far enough away from player and other enemies
+ 	local playerdist=sqrt((8*e.x-startx)^2 + (8*e.y-starty)^2)
+		if playerdist<(3*screen/4) then
+			goto retry
+		end
+			
+		for n in all(enemies) do
+			local dist=sqrt((e.x-n.x)^2 + (e.y-n.y)^2)
+			if dist<3 then
+				goto retry
+			end
+		end
+  
   e.h=6
   e.bullet=false
   add(enemies,e)
 
   local offset=(flr(rnd(2))%2)==0 and 4 or 7
-  for i=0,2 do
-   for j=0,2 do
-    mset(e.x+i,e.y+j,(j*16)+i+offset)
+  for a=0,2 do
+   for b=0,2 do
+    mset(e.x+a,e.y+b,(b*16)+a+offset)
    end
   end
  end
@@ -263,11 +341,11 @@ function findenemy(x,y)
  return nil
 end
 
-function deleteenemy(x,y)
+function deleteenemy(_x,_y)
  --x and y are for top left sprite
  for i=0,2 do
   for j=0,2 do
-   mset(x+i,y+j,0)
+   mset(_x+i,_y+j,0)
   end
  end
 	sfx(0)
@@ -307,16 +385,14 @@ end
 -- player functions
 
 function death()
- if lives==1 then
-  cls()
-  state=3
- else
-  lives-=1
- end
+ lives-=1
  sfx(0)
- ship.x=startx
- ship.y=starty
+ dying=true
+ deathframe=frames
  bullets={}
+ for e in all(enemies) do
+ 	e.bullet=false
+ end
  enemybullets={}
 end
 
@@ -496,13 +572,11 @@ function drawmap()
 end
 
 function drawbar()
-	--rectfill(cam.x,cam.y,cam.x+screen,cam.y+8,1)
  spr(1,cam.x+4,cam.y)
- print("x"..lives,cam.x+14,cam.y+2,12)
- --print("score: "..score,cam.x+45,cam.y+2,14)
+ fancytext("x"..lives,cam.x+14,cam.y+2,12,1)
  fancytext("score: "..score,cam.x+45,cam.y+2,14,2)
  spr(21,cam.x+110,cam.y)
- print("x"..#enemies,cam.x+120,cam.y+2,8)
+ fancytext("x"..#enemies,cam.x+120,cam.y+2,8,2)
 end
 
 function newparticle()
@@ -528,8 +602,8 @@ __gfx__
 00000000000880000666680000044ff00000000000bbbb000000000000000b2b00000000b2b00000000000000000000000000000000000000000000000000000
 00000000000660000066000000f4444f000000000bb22bb0000000000000bb2bb000000bb2bb0000000000000900000000000000000000000000000000000000
 0070070080066008066660000444444400000000bb2bb2bb00000000000bb2b2bb0000bb2b2bb00000000000b890000000000000000990090900000000098000
-0007700060666606966666680f444f4400bbbb0322bbbb2233bbbb00000b2bbb2b0000b2bbb2b000000000032890000933bb890000088998980000000998b000
-000770006666666696666668f444ff440bb22bb3bb2bb2bb3bb22bb0000b2bbb2b0000b2bbb2b00000000983bb8999883bb28900000b288b8b0000999882b000
+0007700060666606966c66680f444f4400bbbb0322bbbb2233bbbb00000b2bbb2b0000b2bbb2b000000000032890000933bb890000088998980000000998b000
+00077000666cc666966c6668f444ff440bb22bb3bb2bb2bb3bb22bb0000b2bbb2b0000b2bbb2b00000000983bb8999883bb28900000b288b8b0000999882b000
 00700700666666660666600044444440bb2bb2bb0bb22bb0bb2bb2bb000bb2b2bb0000bb2b2bb000000098bb0bb888b0bb289000000bb2b2bb0000888b2bb000
 0000000060666606006600000f44440022bbbb2200bbbb0022bbbb220003bb2bb000000bb2bb300000098b2200bbbb0022b890000003bb2bb000000bb2bb3000
 00000000000990000666680000ff4400bb2bb2bb00033000bb2bb2bb00033b2b33000033b2b33000000982bb00033000bb2b890000033b2b33000033b2b33000
@@ -565,7 +639,7 @@ __gfx__
 00000000027cccc77777777777777777777777711122721111127711111772211112777777777777777777777777777777777777777777777cccc72000000000
 00000000027cccc71111777777777711777777711127211112771111111117721111277771117777777777111177111177711177777711117cccc72000000000
 000000000027cccc711172222222227172222271112721112771111111111177221127227777222272222711172271117227772222271117cccc720000000000
-0000000000277ccc7111721111111127721112711127211271111bb111bb1111721127211277111271112711721127717211272111271117ccc7720000000000
+0000000000277ccc7111721111111127721112711127211271111bb111bb1111721127211277111271112711721127117211272111271117ccc7720000000000
 2222222222227cccc71172111222111272111271112721127111b2b111b2b11172112721112211127111271721111271721112211127117cccc7222222222222
 02777777777777ccc71172111277211272111271112721127111bbb111bbb11172112721111211127111277221111127721112211127117ccc77777777777720
 00227cccccccc7cccc71721112772112721112711127211271113131113131117211272111111112711127721122112772111121112717cccc7cccccccc72200
@@ -691,10 +765,12 @@ __map__
 __sfx__
 000300003862034620316202e6202a62027620246201f6201c6201962014620116200e6200b620086200662005620056200562005620056200562005620056200562005620056200100001000010000100001000
 000200003a0503a05035050310502d05027050230501f0501b05017050120500f0500a05004050010500d0000a000080000500002000010002470023700237002370000000000000000000000000000000000000
-000500001c3001f300203002330024300273002a3002c3002e3003030031300333003430034300343003a1003b1003d1000000000000000000000000000000000000000000000000000000000000000000000000
+000200001d0501d0501d0501d050240502405024050240502105021050210501e0501e0501e0501e0502c0502c0502c0502c0502c0502c0502c05025000220002200022000220002e0002e0002e0002e00000000
 000200001a75018750157501475012750107500f7500c7500b750087500675006750017000e1000d1000d10000000000000000000000000002f6002f6002e6002e60000000000000000000000000000000000000
 000200002f62028620216201c6201762012620106200e6200b6200962008620086200862008600016000a30006300013000000000000000000000000000000000000000000000000000000000000000000000000
 000200003a2203a22035220312202d22027220232201f2201b22017220122200f2200a22004220022200d0000a000080000500002000010002470023700237002370000000000000000000000000000000000000
+01100000197541b7441e73420725197551b7451e73422724197541b7451e73522725197541b7441e7342272525755277452a7342e72425754277452a7352e72525754277442a7342e72525755277452a7342e724
+011000000c0431960019600196000c0430000000000000000c0430000000000000000c0430000000000000000c0530000000000000000c0530c00000000000000c0530000000000000000c053000000000000000
 __music__
-00 02424344
+02 06070809
 
