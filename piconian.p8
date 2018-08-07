@@ -5,10 +5,10 @@ __lua__
 -- by aquova
 
 -- todo
--- explosion sprites
+-- bullets/particles vanish if wrap around
+-- particles can get color from hud
 -- moving sfx?
 -- bullets destroy bullets
--- roaming enemies
 -- opening/closing base vunerabilities?
 -- high scores
 
@@ -19,7 +19,7 @@ function _init()
  shipaccel=0.1
  maxshipspd=2
  moving=false
- bulletspeed=3
+ bulletspeed=5
  -- states:
  -- 0 - title screen
  -- 1 - main
@@ -32,7 +32,7 @@ function _init()
  camera(cam.x,cam.y)
  bullets={}
  enemybullets={}
- bulletlimit=4
+ bulletlimit=2
  enemies={}
  lives=3
  blinkspeed=5
@@ -40,6 +40,7 @@ function _init()
 	dying=false
 	transition=false
  titleparticles={}
+ explparticles={}
  particlenum=50
  for _=0,particlenum do
   local p=newparticle()
@@ -80,6 +81,23 @@ end
 -- main functions
 
 function update_main()
+	-- first level musical intro
+	if countdown then
+		if (frames-startframe) > 150 then
+			countdown=false
+		end
+		return
+	end
+
+	-- check for particles first
+	for p in all(explparticles) do
+		p:update()
+		if p.age > p.maxage then
+			del(explparticles,p)
+		end
+	end
+
+	-- dying animation
  if dying then
 		if (frames-deathframe) < 25 then
 			if ship.direc==0 then ship.x-=ship.spd
@@ -98,6 +116,7 @@ function update_main()
  	return
  end
 
+	-- transitioning between levels
 	if transition then
 		moving=false
 		ship.spd=0
@@ -199,6 +218,7 @@ function update_main()
 
  if #enemies==0 then
   transition=true
+  clearbullets()
  end
  cam.x=ship.x-(screen/2)
  cam.y=ship.y-(screen/2)
@@ -225,8 +245,11 @@ function update_title()
 		flashframe+=1
 		if flashframe>=30 then
 			state=1
-			countdown=false
-			music(-1,300)
+			music(1)
+			startframe=frames
+			cam.x=ship.x-(screen/2)
+ 		cam.y=ship.y-(screen/2)
+ 		camera(cam.x,cam.y)
 		end 	
  end
 end
@@ -257,9 +280,9 @@ function draw_main()
 	if transition then
 		rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
 		fancytext("level complete!",cam.x+centertext("level complete!"),cam.y+(screen/2),7,5)
-	elseif not dying then
+	elseif not dying and not countdown then
  	spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
-	else
+	elseif dying then
 		spr(17,ship.x,ship.y)
 	end
 
@@ -270,6 +293,11 @@ function draw_main()
  for eb in all(enemybullets) do
   eb:draw()
  end
+ 
+ for p in all(explparticles) do
+ 	p:draw()
+ end
+ 
  drawbar()
  minimap()
 end
@@ -288,13 +316,48 @@ end
 
 function deleteenemy(_x,_y)
  --x and y are for top left sprite
+ --create explosion effect
+ 
+ for i=0,23 do
+ 	for j=0,23 do
+			--pget needs the on-screen coords
+ 		local col=pget(8*_x+i,8*_y+j)
+ 		add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+ 	end
+ end
+ 
  for i=0,2 do
   for j=0,2 do
    mset(_x+i,_y+j,0)
   end
  end
+
 	sfx(0)
  score+=500
+end
+
+function destroymodule(_x,_y,_n)
+	for i=0,7 do
+ 	for j=0,7 do
+ 		local col=pget(8*_x+i,8*_y+j)
+ 		add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+ 	end
+ end
+	sfx(4)
+ mset(_x,_y,_n+6)
+ score+=100
+end
+
+function deleteobstacle(_x,_y)
+	for i=0,7 do
+ 	for j=0,7 do
+ 		local col=pget(8*_x+i,8*_y+j)
+ 		add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+ 	end
+ end
+	sfx(3)  
+ mset(_x,_y,0)
+ score+=50
 end
 
 function enemybullet(_x,_y,_e)
@@ -303,8 +366,9 @@ function enemybullet(_x,_y,_e)
  b.y=_y
  b.angle=atan2((ship.x-_x),(ship.y-_y))
  b.update=function(this)
-  b.x+=bulletspeed*cos(b.angle)
-  b.y+=bulletspeed*sin(b.angle)
+ 	-- enemy bullets should be slightly slower than players
+  b.x+=(bulletspeed-2)*cos(b.angle)
+  b.y+=(bulletspeed-2)*sin(b.angle)
   if b.y < cam.y or b.y > (cam.y+screen) then
    _e.bullet=false
    del(enemybullets,b)
@@ -334,11 +398,13 @@ function death()
  sfx(0)
  dying=true
  deathframe=frames
- bullets={}
- for e in all(enemies) do
- 	e.bullet=false
+	clearbullets()
+	for i=0,7 do
+ 	for j=0,7 do
+ 		local col=pget(ship.x+i,ship.y+j)
+ 		add(explparticles,explparticle(ship.x+i,ship.y+j,col))
+ 	end
  end
- enemybullets={}
 end
 
 function shipcollision()
@@ -406,32 +472,28 @@ function newbullet()
  b.collide=function(this)
   local sprx=flr((b.x%mapsize)/8)
   local spry=flr((b.y%mapsize)/8)
-  local sprite=mget(sprx,spry)
+  local sprn=mget(sprx,spry)
   local e=findenemy(sprx,spry)
-  if fget(sprite,0) then
+  if fget(sprn,0) then
    del(bullets,b)
    if e.h > 1 then
-   	sfx(4)
-    e.h-=1
-    mset(sprx,spry,sprite+6)
-    score+=100
+   	e.h-=1
+   	destroymodule(sprx,spry,sprn)
    else
     deleteenemy(e.x,e.y)
     del(enemies,e)
    end
-  elseif fget(sprite,1) then
+  elseif fget(sprn,1) then
    del(bullets,b)
    if e~= nil then
     deleteenemy(e.x,e.y)
     del(enemies,e)
    end
-  elseif fget(sprite,2) then
+  elseif fget(sprn,2) then
    del(bullets,b)
-  elseif fget(sprite,3) then
-   sfx(3)
+  elseif fget(sprn,3) then
+   deleteobstacle(sprx,spry)
    del(bullets,b)
-   mset(sprx,spry,0)
-   score+=50
   end
  end
  return b
@@ -525,6 +587,26 @@ function drawbar()
  fancytext("x"..#enemies,cam.x+120,cam.y+2,8,2)
 end
 
+function explparticle(_x,_y,_col)
+	local p={}
+	p.x=_x
+	p.y=_y
+	p.age=0
+	p.maxage=flr(rnd(20))+20
+	p.vx=rnd(2)-1
+	p.vy=rnd(2)-1
+	p.col=_col
+	p.update=function(this)
+		p.age+=1
+		p.x+=p.vx
+		p.y+=p.vy
+	end
+	p.draw=function(this)
+		pset(p.x,p.y,p.col)
+	end
+	return p
+end
+
 function newparticle()
 	local p={}
 	p.x=0
@@ -552,7 +634,17 @@ function nextlevel()
  reload()
  setobstacles()
  setenemies()
+ clearbullets()
  ship={x=startx,y=starty,spd=0,direc=2,sprt=1,flp=false}
+end
+
+function clearbullets()
+	bullets={}
+	for e in all(enemies) do
+ 	e.bullet=false
+ end
+	enemybullets={}
+	explparticles={}
 end
 
 function setobstacles()
@@ -781,6 +873,10 @@ __sfx__
 000200003a2203a22035220312202d22027220232201f2201b22017220122200f2200a22004220022200d0000a000080000500002000010002470023700237002370000000000000000000000000000000000000
 01100000197541b7441e73420725197551b7451e73422724197541b7451e73522725197541b7441e7342272525755277452a7342e72425754277452a7352e72525754277442a7342e72525755277452a7342e724
 011000000c0431960019600196000c0430000000000000000c0430000000000000000c0430000000000000000c0530000000000000000c0530c00000000000000c0530000000000000000c053000000000000000
+010c00002d0502f0502b0502d050290502b050280502905026050280502405026050230502405021050230501f050210501d0501f0501c0501d0501a0501c050180501a050170501705018050180501a0501a050
+010a00001d0501d0501d0501d05011000110001d0501d0501d0501d0551d0501d0501d0501d0551d0501d0501d0501d0501f0501f0501f0501f0501f0501f0500000000000000000000000000000000000000000
 __music__
-02 06070809
+02 06074849
+00 08424344
+00 09424344
 
