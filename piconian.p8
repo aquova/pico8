@@ -5,10 +5,8 @@ __lua__
 -- by aquova
 
 -- todo
--- fix shooting across oob
 -- explosion sprites
 -- moving sfx?
--- title music
 -- bullets destroy bullets
 -- roaming enemies
 -- opening/closing base vunerabilities?
@@ -51,6 +49,35 @@ function _init()
  nextlevel()
  music(0)
 end
+
+function _update()
+ frames+=1
+ if state==0 then
+  update_title()
+ elseif state==2 then
+  update_pause()
+ elseif state==3 then
+  update_gameover()
+ else
+  update_main()
+ end
+end
+
+function _draw()
+ if state==0 then
+  titlescreen()
+ elseif state==2 then
+ 	rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,13)
+ 	fancytext("paused",cam.x+57,cam.y+52,10,8)
+ elseif state==3 then
+		draw_gameover()
+ else
+		draw_main()
+ end
+end
+
+-->8
+-- main functions
 
 function update_main()
  if dying then
@@ -216,119 +243,36 @@ function update_gameover()
  end
 end
 
-function _update()
- frames+=1
- if state==0 then
-  update_title()
- elseif state==2 then
-  update_pause()
- elseif state==3 then
-  update_gameover()
- else
-  update_main()
+function draw_gameover()
+	rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
+ fancytext("game over",cam.x+centertext("game over"),cam.y+50,7,5)
+ local score="final score: "..score
+ fancytext(score,cam.x+centertext(score),cam.y+62,7,5)
+ fancytext("press ❎ or 🅾️ to continue",cam.x+centertext("press ❎ or 🅾️ to continue"),cam.y+74,7,5)
+end
+
+function draw_main()
+ cls()
+ drawmap()
+	if transition then
+		rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
+		fancytext("level complete!",cam.x+centertext("level complete!"),cam.y+(screen/2),7,5)
+	elseif not dying then
+ 	spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
+	else
+		spr(17,ship.x,ship.y)
+	end
+
+ for bullet in all(bullets) do
+  bullet:draw()
  end
-end
 
-function _draw()
- if state==0 then
-  titlescreen()
- elseif state==2 then
- 	rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,13)
- 	fancytext("paused",cam.x+57,cam.y+52,10,8)
- elseif state==3 then
- 	rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
-  fancytext("game over",cam.x+centertext("game over"),cam.y+50,7,5)
-  local score="final score: "..score
-  fancytext(score,cam.x+centertext(score),cam.y+62,7,5)
-  fancytext("press ❎ or 🅾️ to continue",cam.x+centertext("press ❎ or 🅾️ to continue"),cam.y+74,7,5)
- else
-  cls()
-  drawmap()
-		if transition then
-			rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
-			fancytext("level complete!",cam.x+centertext("level complete!"),cam.y+(screen/2),7,5)
-		elseif not dying then
-  	spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
-		else
-			spr(17,ship.x,ship.y)
-		end
-
-  for bullet in all(bullets) do
-   bullet:draw()
-  end
-
-  for eb in all(enemybullets) do
-   eb:draw()
-  end
-  drawbar()
-  minimap()
+ for eb in all(enemybullets) do
+  eb:draw()
  end
+ drawbar()
+ minimap()
 end
-
--->8
--- level loading functions
-
-function nextlevel()
- --resets map
- reload()
- setobstacles()
- setenemies()
- ship={x=startx,y=starty,spd=0,direc=2,sprt=1,flp=false}
-end
-
-function setobstacles()
- for _=0,50 do
-  local ax=rnd(mapsize/8)
-  local ay=rnd(mapsize/8)
-  if (ax<(startx/8-1) or ax>(startx/8+1)) and (ay<(starty/8-1) or ay>(starty/8+1)) then
-   mset(ax,ay,3)
-  end
-
-  local bx=rnd(mapsize/8)
-  local by=rnd(mapsize/8)
-  if (bx<(startx/8-1) or bx>(startx/8+1)) and (by<(starty/8-1) or by>(starty/8+1)) then
-   mset(bx,by,16)
-  end
- end
-end
-
-function setenemies()
- local enemynum=flr(rnd(5))+3
- for i=0,enemynum do
-  local e={}
-		-- ensure enemy isn't drawn on player
-  -- lua has no continue keyword, use a goto
-		::retry::
- 	e.x=flr(rnd((mapsize/8)-2))
- 	e.y=flr(rnd((mapsize/8)-2))
-  	
- 	-- check distances, ensure new enemies are
- 	-- far enough away from player and other enemies
- 	local playerdist=sqrt((8*e.x-startx)^2 + (8*e.y-starty)^2)
-		if playerdist<(3*screen/4) then
-			goto retry
-		end
-			
-		for n in all(enemies) do
-			local dist=sqrt((e.x-n.x)^2 + (e.y-n.y)^2)
-			if dist<3 then
-				goto retry
-			end
-		end
-  
-  e.h=6
-  e.bullet=false
-  add(enemies,e)
-
-  local offset=(flr(rnd(2))%2)==0 and 4 or 7
-  for a=0,2 do
-   for b=0,2 do
-    mset(e.x+a,e.y+b,(b*16)+a+offset)
-   end
-  end
- end
-end
-
 -->8
 -- enemy functions
 
@@ -460,8 +404,8 @@ function newbullet()
   end
  end
  b.collide=function(this)
-  local sprx=flr(b.x/8)
-  local spry=flr(b.y/8)
+  local sprx=flr((b.x%mapsize)/8)
+  local spry=flr((b.y%mapsize)/8)
   local sprite=mget(sprx,spry)
   local e=findenemy(sprx,spry)
   if fget(sprite,0) then
@@ -600,6 +544,70 @@ function newparticle()
 	end
 	return p
 end
+-->8
+-- level loading functions
+
+function nextlevel()
+ --resets map
+ reload()
+ setobstacles()
+ setenemies()
+ ship={x=startx,y=starty,spd=0,direc=2,sprt=1,flp=false}
+end
+
+function setobstacles()
+ for _=0,50 do
+  local ax=rnd(mapsize/8)
+  local ay=rnd(mapsize/8)
+  if (ax<(startx/8-1) or ax>(startx/8+1)) and (ay<(starty/8-1) or ay>(starty/8+1)) then
+   mset(ax,ay,3)
+  end
+
+  local bx=rnd(mapsize/8)
+  local by=rnd(mapsize/8)
+  if (bx<(startx/8-1) or bx>(startx/8+1)) and (by<(starty/8-1) or by>(starty/8+1)) then
+   mset(bx,by,16)
+  end
+ end
+end
+
+function setenemies()
+ local enemynum=flr(rnd(5))+3
+ for i=0,enemynum do
+  local e={}
+		-- ensure enemy isn't drawn on player
+  -- lua has no continue keyword, use a goto
+		::retry::
+ 	e.x=flr(rnd((mapsize/8)-2))
+ 	e.y=flr(rnd((mapsize/8)-2))
+  	
+ 	-- check distances, ensure new enemies are
+ 	-- far enough away from player and other enemies
+ 	local playerdist=sqrt((8*e.x-startx)^2 + (8*e.y-starty)^2)
+		if playerdist<(3*screen/4) then
+			goto retry
+		end
+			
+		for n in all(enemies) do
+			local dist=sqrt((e.x-n.x)^2 + (e.y-n.y)^2)
+			if dist<3 then
+				goto retry
+			end
+		end
+  
+  e.h=6
+  e.bullet=false
+  add(enemies,e)
+
+  local offset=(flr(rnd(2))%2)==0 and 4 or 7
+  for a=0,2 do
+   for b=0,2 do
+    mset(e.x+a,e.y+b,(b*16)+a+offset)
+   end
+  end
+ end
+end
+
 __gfx__
 00000000000880000666680000044ff00000000000bbbb000000000000000b2b00000000b2b00000000000000000000000000000000000000000000000000000
 00000000000660000066000000f4444f000000000bb22bb0000000000000bb2bb000000bb2bb0000000000000900000000000000000000000000000000000000
