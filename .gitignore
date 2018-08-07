@@ -2,4 +2,5 @@
 *.gif
 *.p8.png
 *.png
+!docs/images/*.png
 *.wav
