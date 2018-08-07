@@ -5,40 +5,99 @@ __lua__
 -- by aquova
 
 -- todo
+-- high score wraps at 32000+
 -- bullets/particles vanish if wrap around
 -- particles can get color from hud
 -- moving sfx?
 -- bullets destroy bullets
 -- opening/closing base vunerabilities?
--- high scores
 
 function _init()
- frames=0
+ -- high score variables
+ cartdata("aquova_piconian")
+	
+	alphabet={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","."}
+	
+	-- screen dimensions
  screen=128
  mapsize=4*screen
- shipaccel=0.1
- maxshipspd=2
- moving=false
- bulletspeed=5
+ 
+ resetgame()
+end
+
+function _update()
+ frames+=1
+ if state==0 then
+  update_title()
+ elseif state==2 then
+  update_pause()
+ elseif state==3 then
+  update_gameover()
+ elseif state==4 then
+ 	update_hs()
+ else
+  update_main()
+ end
+end
+
+function _draw()
+ if state==0 then
+ 	draw_title()
+ elseif state==2 then
+ 	rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,13)
+ 	fancytext("paused",cam.x+57,cam.y+52,10,8)
+ elseif state==3 then
+		draw_gameover()
+	elseif state==4 then
+		draw_hs_entry()
+ else
+		draw_main()
+ end
+end
+
+-->8
+-- main functions
+
+function resetgame()
+	frames=0
+ score=0
+ viewhs=false
+ hs={{},{},{},{},{}}
+ loadhs()
+ 
  -- states:
  -- 0 - title screen
  -- 1 - main
  -- 2 - paused
  -- 3 - game over
+ -- 4 - high score entry
  state=0
- score=0
+ 
+ -- ship variables
  startx,starty=(mapsize/2),(mapsize/2)
+ shipaccel=0.1
+ maxshipspd=2
+ moving=false
+ lives=3
+ 
+  -- camera variables
  cam={x=0,y=0}
  camera(cam.x,cam.y)
+ 
+ -- projectiles
  bullets={}
  enemybullets={}
+ bulletspeed=5
  bulletlimit=2
  enemies={}
- lives=3
- blinkspeed=5
+ 
+  -- drawing variables
+ blinkspeed=4
  countdown=false
 	dying=false
 	transition=false
+	
+	-- particle variables
  titleparticles={}
  explparticles={}
  particlenum=50
@@ -51,40 +110,12 @@ function _init()
  music(0)
 end
 
-function _update()
- frames+=1
- if state==0 then
-  update_title()
- elseif state==2 then
-  update_pause()
- elseif state==3 then
-  update_gameover()
- else
-  update_main()
- end
-end
-
-function _draw()
- if state==0 then
-  titlescreen()
- elseif state==2 then
- 	rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,13)
- 	fancytext("paused",cam.x+57,cam.y+52,10,8)
- elseif state==3 then
-		draw_gameover()
- else
-		draw_main()
- end
-end
-
--->8
--- main functions
-
 function update_main()
 	-- first level musical intro
 	if countdown then
-		if (frames-startframe) > 150 then
+		if (frames-startframe) > 60 then
 			countdown=false
+			music(-1)
 		end
 		return
 	end
@@ -110,7 +141,21 @@ function update_main()
  		dying=false
  		moving=false
  		if lives==0 then
- 			state=3
+ 			if checkhs() then
+ 				state=4
+ 				letterptr=0
+ 				letternum=2
+ 				camera()
+ 				particlenum=50
+ 				newhs={score,#alphabet,#alphabet,#alphabet}
+ 				for _=0,particlenum do
+  				local p=newparticle()
+  				p:initial()
+ 					add(titleparticles,p)
+ 				end
+ 			else
+ 				state=3
+ 			end
  		end
  	end
  	return
@@ -233,8 +278,10 @@ function update_title()
 	for p in all(titleparticles) do
 		p:update()
 	end
-	
- if btnp(5) then
+
+	if btnp(0) or btnp(1) then
+		viewhs=not viewhs
+ elseif btnp(5) and not viewhs then
  	flashframe=0
  	blinkspeed=1
  	countdown=true
@@ -245,13 +292,46 @@ function update_title()
 		flashframe+=1
 		if flashframe>=30 then
 			state=1
-			music(1)
+			music(4)
 			startframe=frames
 			cam.x=ship.x-(screen/2)
  		cam.y=ship.y-(screen/2)
  		camera(cam.x,cam.y)
 		end 	
  end
+end
+
+function update_hs()
+	for _=0,particlenum-#titleparticles do
+		add(titleparticles,newparticle())
+	end
+	
+	for p in all(titleparticles) do
+		p:update()
+	end
+	
+	if btnp(0) then
+		letterptr=(letterptr-1)%#alphabet
+	elseif btnp(1) then
+		letterptr=(letterptr+1)%#alphabet
+	elseif btnp(2) then
+		letterptr=(letterptr-6)%#alphabet
+	elseif btnp(3) then
+		letterptr=(letterptr+6)%#alphabet
+	end
+	
+	if btnp(4) then
+		letternum=mid(2,letternum-1,5)
+		newhs[letternum]=#alphabet
+	elseif btnp(5) then
+		if letternum==5 then
+			addhs()
+			resetgame()
+		else
+			newhs[letternum]=letterptr+1
+			letternum=mid(2,letternum+1,5)
+		end
+	end
 end
 
 function update_pause()
@@ -262,7 +342,7 @@ end
 
 function update_gameover()
  if btnp(4) or btnp(5) then
-  _init()
+  resetgame()
  end
 end
 
@@ -272,6 +352,39 @@ function draw_gameover()
  local score="final score: "..score
  fancytext(score,cam.x+centertext(score),cam.y+62,7,5)
  fancytext("press ❎ or 🅾️ to continue",cam.x+centertext("press ❎ or 🅾️ to continue"),cam.y+74,7,5)
+end
+
+function draw_title()
+	if viewhs then
+		drawhs() 		
+ else
+ 	titlescreen()
+ end
+end
+
+function draw_hs_entry()
+	cls()
+	for p in all(titleparticles) do
+		p:draw()
+	end
+	fancytext("new high score!!",centertext("new high score!!"),8,11,1)
+	fancytext("score: "..score,centertext("score: "..score),16,14,2)
+	for i=1,#alphabet do
+		local drawx=10+20*((i-1)%6)
+		local drawy=40+15*flr((i-1)/6)	
+		fancytext(alphabet[i],drawx,drawy,7,5)
+	end
+	
+	local newinitial=alphabet[newhs[2]]..alphabet[newhs[3]]..alphabet[newhs[4]]
+	fancytext(newinitial,centertext(newinitial),screen-16,7,5)
+	
+	if letternum==5 then
+		fancytext("press ❎ to enter score",centertext("press ❎ to enter score"),screen-8,7,5)
+	end
+		
+	if (frames%20 < 10) then
+		spr(34,7+20*((letterptr)%6),30+15*flr((letterptr)/6))
+	end
 end
 
 function draw_main()
@@ -333,7 +446,7 @@ function deleteenemy(_x,_y)
  end
 
 	sfx(0)
- score+=500
+ score+=50
 end
 
 function destroymodule(_x,_y,_n)
@@ -345,7 +458,7 @@ function destroymodule(_x,_y,_n)
  end
 	sfx(4)
  mset(_x,_y,_n+6)
- score+=100
+ score+=10
 end
 
 function deleteobstacle(_x,_y)
@@ -357,7 +470,7 @@ function deleteobstacle(_x,_y)
  end
 	sfx(3)  
  mset(_x,_y,0)
- score+=50
+ score+=5
 end
 
 function enemybullet(_x,_y,_e)
@@ -543,9 +656,10 @@ function titlescreen()
  spr(73,72,18,7,4)
  spr(50,48,50,3,1)
  spr(32,16,50,2,2)
- fancytext("by aquova",centertext("by aquova"),100,11,1)
+ fancytext("by aquova",centertext("by aquova"),screen-32,11,1)
  spr(2,60+2*cos(t()/3),72,1,1,true,false)
-	blinktext("press ❎ to start",centertext("press ❎ to start"),screen-16,6,12,13)
+	fancytext("press ⬅️ ➡️ for high scores",centertext("press ⬅️ ➡️ for high scores"),screen-16,11,1)
+	blinktext("press ❎ to start",centertext("press ❎ to start"),screen-8,6,12,13)	
 end
 
 function minimap()
@@ -700,6 +814,81 @@ function setenemies()
  end
 end
 
+-->8
+-- high score functions
+
+-- high score memory layout
+-- dget(0) - 0 if first time running, 1 otherwise
+-- scores are saved in groups of 4
+-- i - score
+-- i+1 -> i+3 - three initials
+
+function reseths()
+	local hs1={500,1,19,2}
+	local hs2={400,22,14,12}
+	local hs3={300,1,22,1}
+	local hs4={200,13,15,13}
+	local hs5={100,20,15,5}
+	hs={hs1,hs2,hs3,hs4,hs5}
+	savehs()
+end
+
+function loadhs()
+	-- if uninitialized
+	if dget(0)==0 then
+		reseths()
+		dset(0,1)
+	else
+		for i=0,(#hs-1) do
+			for j=1,4 do
+				hs[i+1][j]=dget((#hs-1)*i+j)
+			end	
+		end
+	end
+end
+
+function savehs()
+	for i=0,(#hs-1) do
+		for j=1,4 do
+			dset((#hs-1)*i+j,hs[i+1][j])
+		end	
+	end
+end
+
+function drawhs()
+	cls()
+	for p in all(titleparticles) do
+		p:draw()
+	end
+	
+	fancytext("high scores",centertext("high scores"),16,11,1)
+	
+	for i=1,#hs do
+		local initial=alphabet[hs[i][2]]..alphabet[hs[i][3]]..alphabet[hs[i][4]]
+		fancytext(initial,20,32+8*i,7,5)
+		fancytext(hs[i][1],screen-20-4*#tostr(hs[i][1]),32+8*i,7,5)
+	end
+	
+	fancytext("press ⬅️ ➡️ for title screen",centertext("press ⬅️ ➡️ for title screen"),screen-16,11,1)
+end
+
+function checkhs()
+	return (score > hs[#hs][1])
+end
+
+function addhs()
+	for i=(#hs-1),1,-1 do
+		if newhs[1] > hs[i][1] then
+			hs[i+1]=hs[i]
+		else
+			hs[i+1]=newhs
+			savehs()
+			return
+		end
+	end
+	hs[1]=newhs
+	savehs()
+end
 __gfx__
 00000000000880000666680000044ff00000000000bbbb000000000000000b2b00000000b2b00000000000000000000000000000000000000000000000000000
 00000000000660000066000000f4444f000000000bb22bb0000000000000bb2bb000000bb2bb0000000000000900000000000000000000000000000000000000
@@ -721,10 +910,10 @@ __gfx__
 0002729927200000000000000000000022bbbb2200bbbb0022bbbb220000bb2bb000000bb2bb30000000982200bbbb0022b8900000008b2bb000000bb2bb3000
 00027292772000000000000000000000bb2bb2bb0bb22bb0bb2bb2bb000bb2b2bb0000bb2b2bb000000098bb0bb22bb0bb289000000098b2bb0000bb888bb000
 000272927200000000000000000000000bb22bb3bb2bb2bb3bb22bb0000b2bbb2b0000b2bbb2b00000098bb3bb2888bb3bb28900000009882b0000b899988000
-0002722722000000000000000000000000bbbb3322bbbb2233bbbb00000b2bbb2b0000b2bbb2b00000098b332289998833bbb800000000998800008900099000
-0002722720000000000000000000000000000000bb2bb2bb00000000000bb2b2bb0000bb2b2bb000000000008890009900000000000000009900009000000000
-00027272200000000000000000000000000000000bb22bb0000000000000bb2bb000000bb2bb0000000000000900000000000000000000000000000000000000
-000272720000000000000000000000000000000000bbbb000000000000000b2b00000000b2b00000000000000000000000000000000000000000000000000000
+0002722722000000555555550000000000bbbb3322bbbb2233bbbb00000b2bbb2b0000b2bbb2b00000098b332289998833bbb800000000998800008900099000
+0002722720000000056666500000000000000000bb2bb2bb00000000000bb2b2bb0000bb2b2bb000000000008890009900000000000000009900009000000000
+00027272200000000056650000000000000000000bb22bb0000000000000bb2bb000000bb2bb0000000000000900000000000000000000000000000000000000
+000272720000000000055000000000000000000000bbbb000000000000000b2b00000000b2b00000000000000000000000000000000000000000000000000000
 00027722000000002772999999999277220000000000000000000022222000000000000000000000000000000000000000000000000000000000000000000000
 00027720000000000277229999992772000000000000000000000277777200000000000000000000000000000000000000000000000000000000000000000000
 00027200000000000022772222227220000000000000000000022721112722000000000000000000000000000000000000000000000000000000000000000000
@@ -757,12 +946,12 @@ __gfx__
 000000000027ccc71111722222711111722222722227222227111111111111172222272222272222722227222277222272222722222711117cccc72000000000
 000000000027ccc71111722222711111722222722227222222771111111111722222272222272222722227222277222272222722222711117ccc720000000000
 000000000027ccc71111722222711111722222722222722222227711111172222222272222272222722227222277222272222722222711117ccc720000000000
-0000000000027ccc711172444271111172222272444227724444227111772444422772222227222272222722227722227222272222271117ccc7200000000000
+0000000000027ccc711172444271111172444272444227724444227111772444422772244427244272442724427724427244272444271117ccc7200000000000
 0000000000027ccc711172444271111172444272244442272444422777224444277242244427244272442724427724427244272444271117ccc7200000000000
 0000000000027ccc777772444277777777777777724444227724444222444422722442777777777777777777777777777777777777777777ccc7200000000000
 00000000000027ccccccc29992ccccccccccc7222722999922729999999992772999927ccccccccccccccccccccccccccccccccccccccccccc72200000000000
-00000000000027ccccccc29992cccccccccc72000277229999277229999277229992277ccccccccccccccccccccccccccccccccccccccccccc72000000000000
-00000000000027ccccccc29992ccccccccc722000022772999922772222722999927777ccccccccccccccccccccccccccccccccccccccccccc72000000000000
+00000000000027ccccccc29992cccccccccc7200027722999927722999927722999227cccccccccccccccccccccccccccccccccccccccccccc72000000000000
+00000000000027ccccccc29992ccccccccc72200002277299992277222272299992777cccccccccccccccccccccccccccccccccccccccccccc72000000000000
 00000000000027777777729992777777777220000000227229999227777299992272227777777777777777777777777777777777777777777772000000000000
 00000000000022222222729992722222222200000000002772299992222999227720002222222222222222222222222222222222222222222222000000000000
 00000000000000000000000000000000000000000031000000000000000031000000000031000000000000000000000000000000000000000000000000000000
@@ -871,12 +1060,18 @@ __sfx__
 000200001a75018750157501475012750107500f7500c7500b750087500675006750017000e1000d1000d10000000000000000000000000002f6002f6002e6002e60000000000000000000000000000000000000
 000200002f62028620216201c6201762012620106200e6200b6200962008620086200862008600016000a30006300013000000000000000000000000000000000000000000000000000000000000000000000000
 000200003a2203a22035220312202d22027220232201f2201b22017220122200f2200a22004220022200d0000a000080000500002000010002470023700237002370000000000000000000000000000000000000
-01100000197541b7441e73420725197551b7451e73422724197541b7451e73522725197541b7441e7342272525755277452a7342e72425754277452a7352e72525754277442a7342e72525755277452a7342e724
-011000000c0431960019600196000c0430000000000000000c0430000000000000000c0430000000000000000c0530000000000000000c0530c00000000000000c0530000000000000000c053000000000000000
-010c00002d0502f0502b0502d050290502b050280502905026050280502405026050230502405021050230501f050210501d0501f0501c0501d0501a0501c050180501a050170501705018050180501a0501a050
+010c0000197541b7441e73420725197551b7451e73422724197541b7451e73522725197541b7441e7342272525755277452a7342e72425754277452a7352e72525754277442a7342e72525755277452a7342e724
+010c00000c0431960019600196000c0430000000000000000c0430000000000000000c6430000000000000000c0530000000000000000c0530c00000000000000c0530000000000000000c653000000000000000
+010c00001b7541e74420734227251b7551e74520734227241b7541e74520735227251b7541e7442073422725277552a7452c7342e724277542a7452c7352e725277542a7442c7342e725277552a7452c7342e724
 010a00001d0501d0501d0501d05011000110001d0501d0501d0501d0551d0501d0501d0501d0551d0501d0501d0501d0501f0501f0501f0501f0501f0501f0500000000000000000000000000000000000000000
+010a00002105021050210502105011000110002105021050210502105521050210502105021055210502105021050210502305023050230502305023050230500000000000000000000000000000000000000000
+010c00000c0431960019600196000c6430000000000000000c0430c04300000000000c6430000000000000000c0530000000000000000c6530c00000000000000c0530c04300000000000c653000000000000000
+010c0000190541b0541e054200551e0551b05519055190541b0541e0542005422055200551e0551b0551b0541e05420054220542505522055200551e0551e05420054200541e05520055220551e0551905419054
+010c00001b0541e0542005422055200551e0551b0551b0541e05420054220542505522055200551e0551e0542005422054250542705525055220552005520054220542205425055270552a0552c0552e05431054
 __music__
-02 06074849
-00 08424344
-00 09424344
+00 06074849
+00 08074344
+00 0c0b4344
+02 0d0b4344
+00 090b4344
 
