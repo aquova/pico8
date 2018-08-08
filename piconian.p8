@@ -6,11 +6,7 @@ __lua__
 
 -- todo
 -- high score wraps at 32000+
--- bullets/particles vanish if wrap around
--- particles can get color from hud
--- moving sfx?
--- bullets destroy bullets
--- opening/closing base vunerabilities?
+-- more enemies at higher levels
 
 function _init()
  -- high score variables
@@ -44,8 +40,8 @@ function _draw()
  if state==0 then
  	draw_title()
  elseif state==2 then
- 	rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,13)
- 	fancytext("paused",cam.x+57,cam.y+52,10,8)
+ 	rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,1)
+ 	fancytext("paused",cam.x+57,cam.y+52,7,5)
  elseif state==3 then
 		draw_gameover()
 	elseif state==4 then
@@ -61,6 +57,9 @@ end
 function resetgame()
 	frames=0
  score=0
+ level=1
+ lifepoints=1000
+ lifecheck=0xfffe
  viewhs=false
  hs={{},{},{},{},{}}
  loadhs()
@@ -136,11 +135,14 @@ function update_main()
  		elseif ship.direc==2 then ship.y-=ship.spd
  		elseif ship.direc==3 then ship.y+=ship.spd end
  	else
+ 		-- reset ship after death
  		ship.x, ship.y=startx, starty
  		ship.spd=0
  		dying=false
  		moving=false
+ 		-- game over
  		if lives==0 then
+ 			-- if new high score, go to name entry
  			if checkhs() then
  				state=4
  				letterptr=0
@@ -153,6 +155,7 @@ function update_main()
   				p:initial()
  					add(titleparticles,p)
  				end
+ 			-- otherwise main menu
  			else
  				state=3
  			end
@@ -173,7 +176,33 @@ function update_main()
 		end
 		return
 	end
+	
+	-- update enemies
+	for e in all(enemies) do
+  if not(e.bullet) then
+   local mapx=8*e.x
+   local mapy=8*e.y
+   if (cam.x <= mapx and (mapx+24) <= (cam.x+screen)) and (cam.y <= mapy and (mapy+24) <= (cam.y+screen)) then
+    e.bullet=true
+    add(enemybullets,enemybullet(mapx+12,mapy+12,e))
+				sfx(5)
+   end
+  end
+ end
+
+	-- update enemy bullets
+ for eb in all(enemybullets) do
+  eb:update()
+  eb:collide()
+ end
  
+ -- update player bullets
+ for bullet in all(bullets) do
+  bullet:update()
+  bullet:collide()
+ end
+ 
+ -- player directional input
  if btn(0) then
   ship.direc=0
   moving=true
@@ -188,6 +217,7 @@ function update_main()
   moving=true
  end
 
+	-- update player sprite
 	if moving then
 		ship.spd=mid(0,ship.spd+shipaccel,maxshipspd)
  end
@@ -209,10 +239,12 @@ function update_main()
   ship.flp=true
  end
 
+	-- pause button
  if btnp(4) then
   state=2
  end
 
+	-- fire bullet
  if btnp(5) then
   if count(bullets)<bulletlimit then
    add(bullets,newbullet())
@@ -223,47 +255,65 @@ function update_main()
   end
  end
 
+	-- update ship and bullet wrapping
  if ship.x < 0 then
-  ship.x=mapsize
+  ship.x=mapsize-1
+  for b in all(bullets) do
+  	b.x+=mapsize
+  end
+  for p in all(explparticles) do
+  	p.x+=mapsize
+  end
+  for eb in all(enemybullets) do
+  	eb.x+=mapsize
+  end
  elseif ship.x > mapsize then
-  ship.x=0
+  ship.x=1
+  for b in all(bullets) do
+  	b.x-=mapsize
+  end
+  for p in all(explparticles) do
+  	p.x-=mapsize
+  end
+  for eb in all(enemybullets) do
+  	eb.x-=mapsize
+  end
  end
 
  if ship.y < 0 then
-  ship.y=mapsize
+  ship.y=mapsize-1
+  for b in all(bullets) do
+  	b.y+=mapsize
+  end
+  for p in all(explparticles) do
+  	p.y+=mapsize
+  end
+  for eb in all(enemybullets) do
+  	eb.y+=mapsize
+  end
  elseif ship.y > mapsize then
-  ship.y=0
+  ship.y=1
+  for b in all(bullets) do
+  	b.y-=mapsize
+  end
+  for p in all(explparticles) do
+  	p.y-=mapsize
+  end
+  for eb in all(enemybullets) do
+  	eb.y-=mapsize
+  end
  end
 
+	-- check for death
  if shipcollision() then
   death()
  end
 
- for e in all(enemies) do
-  if not(e.bullet) then
-   local mapx=8*e.x
-   local mapy=8*e.y
-   if (cam.x <= mapx and (mapx+24) <= (cam.x+screen)) and (cam.y <= mapy and (mapy+24) <= (cam.y+screen)) then
-    e.bullet=true
-    add(enemybullets,enemybullet(mapx+12,mapy+12,e))
-				sfx(5)
-   end
-  end
- end
-
- for eb in all(enemybullets) do
-  eb:update()
-  eb:collide()
- end
-
- for bullet in all(bullets) do
-  bullet:update()
-  bullet:collide()
- end
-
+	-- check if level end
  if #enemies==0 then
   transition=true
   clearbullets()
+  level+=1
  end
  cam.x=ship.x-(screen/2)
  cam.y=ship.y-(screen/2)
@@ -384,6 +434,8 @@ function draw_hs_entry()
 		
 	if (frames%20 < 10) then
 		spr(34,7+20*((letterptr)%6),30+15*flr((letterptr)/6))
+	else
+		spr(34,7+20*((letterptr)%6),28+15*flr((letterptr)/6))	
 	end
 end
 
@@ -391,12 +443,23 @@ function draw_main()
  cls()
  drawmap()
 	if transition then
-		rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
-		fancytext("level complete!",cam.x+centertext("level complete!"),cam.y+(screen/2),7,5)
-	elseif not dying and not countdown then
- 	spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
+		rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,1)
+		fancytext("level complete!",cam.x+centertext("level complete!"),cam.y+52,7,5)
+		spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
 	elseif dying then
 		spr(17,ship.x,ship.y)
+	elseif countdown then
+		spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
+		rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,1)
+		if (frames-startframe) < 10 then
+			fancytext("blast off!",cam.x+5*(frames-startframe),cam.y+52,7,5)		
+		elseif (frames-startframe) < 40 then
+			fancytext("blast off!",cam.x+50,cam.y+52,7,5)
+		else
+			fancytext("blast off!",cam.x+5*(frames-startframe-30),cam.y+52,7,5)
+		end	
+	else
+		spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
 	end
 
  for bullet in all(bullets) do
@@ -435,7 +498,9 @@ function deleteenemy(_x,_y)
  	for j=0,23 do
 			--pget needs the on-screen coords
  		local col=pget(8*_x+i,8*_y+j)
- 		add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+ 		if col~=0 then
+ 			add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+ 		end
  	end
  end
  
@@ -447,30 +512,37 @@ function deleteenemy(_x,_y)
 
 	sfx(0)
  score+=50
+ extralife()
 end
 
 function destroymodule(_x,_y,_n)
 	for i=0,7 do
  	for j=0,7 do
  		local col=pget(8*_x+i,8*_y+j)
- 		add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+ 		if col~=0 then
+ 			add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+ 		end
  	end
  end
 	sfx(4)
  mset(_x,_y,_n+6)
  score+=10
+ extralife()
 end
 
 function deleteobstacle(_x,_y)
 	for i=0,7 do
  	for j=0,7 do
  		local col=pget(8*_x+i,8*_y+j)
- 		add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+ 		if col~=0 then
+ 			add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+ 		end
  	end
  end
 	sfx(3)  
  mset(_x,_y,0)
  score+=5
+ extralife()
 end
 
 function enemybullet(_x,_y,_e)
@@ -612,6 +684,15 @@ function newbullet()
  return b
 end
 
+function extralife()
+	local check=flr(score/lifepoints)
+	local mask=shl(1,check)
+	if band(mask,lifecheck)~=0 then
+		lives+=1
+		lifecheck-=mask
+		sfx(14)
+	end
+end
 -->8
 -- drawing functions
 
@@ -778,7 +859,7 @@ function setobstacles()
 end
 
 function setenemies()
- local enemynum=flr(rnd(5))+3
+ local enemynum=flr(rnd(ceil(level/3)))+3
  for i=0,enemynum do
   local e={}
 		-- ensure enemy isn't drawn on player
@@ -824,11 +905,11 @@ end
 -- i+1 -> i+3 - three initials
 
 function reseths()
-	local hs1={500,1,19,2}
-	local hs2={400,22,14,12}
-	local hs3={300,1,22,1}
-	local hs4={200,13,15,13}
-	local hs5={100,20,15,5}
+	local hs1={2500,1,19,2}
+	local hs2={1000,22,14,12}
+	local hs3={500,1,22,1}
+	local hs4={400,13,15,13}
+	local hs5={250,20,15,5}
 	hs={hs1,hs2,hs3,hs4,hs5}
 	savehs()
 end
@@ -923,25 +1004,25 @@ __gfx__
 00022000000000000000000000000000000000000000027721111227772211112772200000000000000000000000000000000000000000000000000000000000
 00022000000000000000000000000000000000000002272211112772227721111227720000000000000000000000000000000000000000000000000000000000
 00002222222222222222222222222222222222222227721111227221112277211112272222222222222222222222222222222222222222222222222222220000
-00000227777777777777777777777777777777777772211122772111111122722111127777777777777777777777777777777777777777777777777772200000
+00000277777777777777777777777777777777777772211122772111111122722111127777777777777777777777777777777777777777777777777777200000
 00000027cccccccccccccccccccccccccccccccc7221111277221111111112277211127ccccccccccccccccccccccccccccccccccccccccccccccccc72000000
 000000027cccccccccccccccccccccccccccccc72211112722111122222111122721127cccccccccccccccccccccccccccccccccccccccccccccccc720000000
 0000000027cccccccccccccccccccccccccccc721111277211112277777221111277227ccccccccccccccccccccccccccccccccccccccccccccccc7200000000
 00000000027cccc77777777777777777777777711122721111127711111772211112777777777777777777777777777777777777777777777cccc72000000000
 00000000027cccc71111777777777711777777711127211112771111111117721111277771117777777777111177111177711177777711117cccc72000000000
 000000000027cccc711172222222227172222271112721112771111111111177221127227777222272222711172271117227772222271117cccc720000000000
-0000000000277ccc7111721111111127721112711127211271111bb111bb1111721127211277111271112711721127117211272111271117ccc7720000000000
+0000000000027ccc7111721111111127721112711127211271111bb111bb1111721127211277111271112711721127117211272111271117ccc7200000000000
 2222222222227cccc71172111222111272111271112721127111b2b111b2b11172112721112211127111271721111271721112211127117cccc7222222222222
 02777777777777ccc71172111277211272111271112721127111bbb111bbb11172112721111211127111277221111127721112211127117ccc77777777777720
 00227cccccccc7cccc71721112772112721112711127211271113131113131117211272111111112711127721122112772111121112717cccc7cccccccc72200
 000227cccccccc7ccc7172222272222272222272222722227113111b8b1113117222272222222222722227222222222272222222222717ccc7cccccccc722000
-0000027ccccccc7ccc71722222222227722222722227222271bbb1bbebb1bbb17222272222222222722227222227222272222222222717ccc7ccccccc7200000
-0000027ccccc1117ccc7722222222227722222722227222271b2b3bb7bb3b2b1722227222222222272222722227722227222222222277ccc7111ccccc7200000
+0000027cccc7777ccc71722222222227722222722227222271bbb1bbebb1bbb17222272222222222722227222227222272222222222717ccc7777cccc7200000
+0000027cccc71117ccc7722222222227722222722227222271b2b3bb7bb3b2b1722227222222222272222722227722227222222222277ccc71117cccc7200000
 00000027cccc7117ccc7722222222771722222722227222271bbb1bbebb1bbb1722227222227222272222722227722227222272222277ccc7117cccc72000000
 000000227cccc717cccc72222227711172222272222722227113111b8b11131172222722222722227222272222222222722227222227cccc717cccc722000000
-0000000277ccc711cccc7222227111117222227222272222711131311131311172222722222722227222272222222222722227222227cccc117ccc7720000000
-0000000027cccc71cccc72222271111172222272222722227111bbb111bbb11172222722222722227222272222222222722227222227cccc17cccc7200000000
-0000000002ccccc7177772222271111172222272222722227111b2b111b2b11172222722222722227222272222222222722227222227777117ccc72000000000
+000000027cccc7117ccc7222227111117222227222272222711131311131311172222722222722227222272222222222722227222227ccc7117cccc720000000
+0000000027cccc717ccc72222271111172222272222722227111bbb111bbb11172222722222722227222272222222222722227222227ccc717cccc7200000000
+00000000027cccc7177772222271111172222272222722227111b2b111b2b11172222722222722227222272222222222722227222227777117ccc72000000000
 00000000027cccc71111722222711111722222722227222271111bb111bb11117222272222272222722227222277222272222722222711117cccc72000000000
 000000000027ccc71111722222711111722222722227222227111111111111172222272222272222722227222277222272222722222711117cccc72000000000
 000000000027ccc71111722222711111722222722227222222771111111111722222272222272222722227222277222272222722222711117ccc720000000000
@@ -1068,6 +1149,7 @@ __sfx__
 010c00000c0431960019600196000c6430000000000000000c0430c04300000000000c6430000000000000000c0530000000000000000c6530c00000000000000c0530c04300000000000c653000000000000000
 010c0000190541b0541e054200551e0551b05519055190541b0541e0542005422055200551e0551b0551b0541e05420054220542505522055200551e0551e05420054200541e05520055220551e0551905419054
 010c00001b0541e0542005422055200551e0551b0551b0541e05420054220542505522055200551e0551e0542005422054250542705525055220552005520054220542205425055270552a0552c0552e05431054
+000500003005030050300502d0502d0502d0503005030050300503505035050350500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __music__
 00 06074849
 00 08074344
