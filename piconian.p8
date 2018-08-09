@@ -4,10 +4,6 @@ __lua__
 -- piconian
 -- by aquova
 
--- todo
--- high score wraps at 32000+
--- more enemies at higher levels
-
 function _init()
  -- high score variables
  cartdata("aquova_piconian")
@@ -329,8 +325,10 @@ function update_title()
 		p:update()
 	end
 
+	-- if left or right, switch menus
 	if btnp(0) or btnp(1) then
 		viewhs=not viewhs
+	-- if ❎ and on main view, enter game
  elseif btnp(5) and not viewhs then
  	flashframe=0
  	blinkspeed=1
@@ -338,6 +336,7 @@ function update_title()
  	sfx(2)
  end
  
+ -- flash menu for 30 frames
  if countdown then
 		flashframe+=1
 		if flashframe>=30 then
@@ -352,6 +351,7 @@ function update_title()
 end
 
 function update_hs()
+	-- generate background effect
 	for _=0,particlenum-#titleparticles do
 		add(titleparticles,newparticle())
 	end
@@ -360,6 +360,7 @@ function update_hs()
 		p:update()
 	end
 	
+	-- move cursor
 	if btnp(0) then
 		letterptr=(letterptr-1)%#alphabet
 	elseif btnp(1) then
@@ -370,16 +371,20 @@ function update_hs()
 		letterptr=(letterptr+6)%#alphabet
 	end
 	
+	-- enter/delete letter
 	if btnp(4) then
 		letternum=mid(2,letternum-1,5)
 		newhs[letternum]=#alphabet
+		sfx(15)
 	elseif btnp(5) then
 		if letternum==5 then
 			addhs()
 			resetgame()
+			sfx(14)
 		else
 			newhs[letternum]=letterptr+1
 			letternum=mid(2,letternum+1,5)
+			sfx(15)
 		end
 	end
 end
@@ -442,6 +447,17 @@ end
 function draw_main()
  cls()
  drawmap()
+ for bullet in all(bullets) do
+  bullet:draw()
+ end
+
+ for eb in all(enemybullets) do
+  eb:draw()
+ end
+ 
+ for p in all(explparticles) do
+ 	p:draw()
+ end
 	if transition then
 		rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,1)
 		fancytext("level complete!",cam.x+centertext("level complete!"),cam.y+52,7,5)
@@ -461,18 +477,6 @@ function draw_main()
 	else
 		spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
 	end
-
- for bullet in all(bullets) do
-  bullet:draw()
- end
-
- for eb in all(enemybullets) do
-  eb:draw()
- end
- 
- for p in all(explparticles) do
- 	p:draw()
- end
  
  drawbar()
  minimap()
@@ -480,6 +484,7 @@ end
 -->8
 -- enemy functions
 
+-- locate which enemy contains x and y
 function findenemy(x,y)
  --(x,y) are sprite coords
  for e in all(enemies) do
@@ -515,6 +520,7 @@ function deleteenemy(_x,_y)
  extralife()
 end
 
+-- destory one of the 'bubbles'
 function destroymodule(_x,_y,_n)
 	for i=0,7 do
  	for j=0,7 do
@@ -530,6 +536,7 @@ function destroymodule(_x,_y,_n)
  extralife()
 end
 
+-- destroy meteor/mine
 function deleteobstacle(_x,_y)
 	for i=0,7 do
  	for j=0,7 do
@@ -592,6 +599,7 @@ function death()
  end
 end
 
+-- player collision detection
 function shipcollision()
  local sprite=mget(flr(ship.x/8),flr(ship.y/8))
  for i=0,3 do
@@ -684,7 +692,10 @@ function newbullet()
  return b
 end
 
+-- check if player earns extra life
 function extralife()
+	-- if extra life has been earned at that level
+	-- is stored in bit flags
 	local check=flr(score/lifepoints)
 	local mask=shl(1,check)
 	if band(mask,lifecheck)~=0 then
@@ -700,6 +711,7 @@ function centertext(t)
  return (screen/2)-#t*2
 end
 
+-- draws text with a border
 function fancytext(_t,_x,_y,_c1,_c2)
 	print(_t,_x-1,_y-1,_c2)
 	print(_t,_x,_y-1,_c2)
@@ -725,6 +737,7 @@ function blinktext(_t,_x,_y,_c1,_c2,_c3)
 	end
 end
 
+-- draws main title screen
 function titlescreen()
  cls()
  -- must break up title sprite
@@ -756,6 +769,7 @@ function minimap()
  rectfill(minix+shipx,miniy+shipy,minix+shipx+1,miniy+shipy+1,11)
 end
 
+-- draws background
 function drawmap()
  local topx=flr(cam.x/128)*128
  local topy=flr(cam.y/128)*128
@@ -774,6 +788,7 @@ function drawmap()
  map((colx+16)%64,(coly+16)%64,topx+screen,topy+screen,16,16)
 end
 
+-- draws top ui
 function drawbar()
  spr(1,cam.x+4,cam.y)
  fancytext("x"..lives,cam.x+14,cam.y+2,12,1)
@@ -782,6 +797,7 @@ function drawbar()
  fancytext("x"..#enemies,cam.x+120,cam.y+2,8,2)
 end
 
+-- destruction particle effect
 function explparticle(_x,_y,_col)
 	local p={}
 	p.x=_x
@@ -802,6 +818,7 @@ function explparticle(_x,_y,_col)
 	return p
 end
 
+-- particle for title screen
 function newparticle()
 	local p={}
 	p.x=0
@@ -842,6 +859,7 @@ function clearbullets()
 	explparticles={}
 end
 
+-- generates new meteors/mines
 function setobstacles()
  for _=0,50 do
   local ax=rnd(mapsize/8)
@@ -858,7 +876,9 @@ function setobstacles()
  end
 end
 
+-- generates new ships
 function setenemies()
+	-- every 3 levels, the max number of enemies increases
  local enemynum=flr(rnd(ceil(level/3)))+3
  for i=0,enemynum do
   local e={}
@@ -936,6 +956,7 @@ function savehs()
 	end
 end
 
+-- draws the high score record display
 function drawhs()
 	cls()
 	for p in all(titleparticles) do
@@ -953,10 +974,12 @@ function drawhs()
 	fancytext("press ⬅️ ➡️ for title screen",centertext("press ⬅️ ➡️ for title screen"),screen-16,11,1)
 end
 
+-- checks if current score should be on hs list
 function checkhs()
 	return (score > hs[#hs][1])
 end
 
+-- adds new high score to list
 function addhs()
 	for i=(#hs-1),1,-1 do
 		if newhs[1] > hs[i][1] then
@@ -1150,6 +1173,7 @@ __sfx__
 010c0000190541b0541e054200551e0551b05519055190541b0541e0542005422055200551e0551b0551b0541e05420054220542505522055200551e0551e05420054200541e05520055220551e0551905419054
 010c00001b0541e0542005422055200551e0551b0551b0541e05420054220542505522055200551e0551e0542005422054250542705525055220552005520054220542205425055270552a0552c0552e05431054
 000500003005030050300502d0502d0502d0503005030050300503505035050350500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000200001e1501e1501e1501e1501c1501c1500000000000170001700017000150001500015000000000000000000000001d3001d3001d3001b3001b3001b3000000000000000000000000000000000000000000
 __music__
 00 06074849
 00 08074344
