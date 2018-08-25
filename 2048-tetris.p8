@@ -44,27 +44,31 @@ end
 
 function shiftblocks(_dir)
 	-- _dir is 0 for left, 1 for right
-	for y=5,2,-1 do
-		if _dir==0 then
-			for x=3,1 do
-				-- if empty space
-				if grid[x][y]==0 then
-					grid[x][y],grid[x+1][y]=grid[x+1][y],grid[x][y]
-				-- if matching blocks
-				elseif grid[x][y]==grid[x+1][y] then
-					grid[x][y]*=2
-					grid[x+1][y]=0
+	if _dir==0 then
+		-- shift left
+		for x=4,2,-1 do
+			for y=2,5 do
+				if x~=bfall[1] and y~=bfall[2] then
+					if grid[y][x-1]==0 then
+						grid[y][x],grid[y][x-1]=grid[y][x-1],grid[y][x]
+					elseif grid[y][x-1]==grid[y][x] then
+						grid[y][x-1]*=2
+						grid[y][x]=0
+					end
 				end
 			end
-		else
-			for x=2,4 do
-				-- if empty space
-				if grid[x][y]==0 then
-					grid[x][y],grid[x-1][y]=grid[x-1][y],grid[x][y]
-				-- if matching blocks
-				elseif grid[x][y]==grid[x-1][y] then
-					grid[x][y]*=2
-					grid[x-1][y]=0
+		end
+	else
+		-- shift right
+		for x=1,3 do
+			for y=2,5 do
+				if x~=bfall[1] and y~=bfall[2] then
+					if grid[y][x+1]==0 then
+						grid[y][x],grid[y][x+1]=grid[y][x+1],grid[y][x]
+					elseif grid[y][x+1]==grid[y][x] then
+						grid[y][x+1]*=2
+						grid[y][x]=0
+					end
 				end
 			end
 		end
@@ -81,13 +85,11 @@ function update_main()
 		lastmove=t()
 	end
 
---[[
 	if btnp(0) then
 		shiftblocks(0)
 	elseif btnp(1) then
 		shiftblocks(1)
 	end
---]]
 end
 
 function _init()
