@@ -8,9 +8,9 @@ function _init()
  -- high score variables
  cartdata("aquova_piconian")
 
-	alphabet={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","."}
+ alphabet={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","."}
 
-	-- screen dimensions
+ -- screen dimensions
  screen=128
  mapsize=4*screen
 
@@ -26,7 +26,7 @@ function _update()
  elseif state==3 then
   update_gameover()
  elseif state==4 then
- 	update_hs()
+  update_hs()
  else
   update_main()
  end
@@ -34,15 +34,15 @@ end
 
 function _draw()
  if state==0 then
- 	draw_title()
+  draw_title()
  elseif state==2 then
- 	draw_pause()
+  draw_pause()
  elseif state==3 then
-		draw_gameover()
-	elseif state==4 then
-		draw_hs_entry()
+  draw_gameover()
+ elseif state==4 then
+  draw_hs_entry()
  else
-		draw_main()
+  draw_main()
  end
 end
 
@@ -50,7 +50,7 @@ end
 -- main functions
 
 function resetgame()
-	frames=0
+ frames=0
  score=0
  level=1
  lifepoints=1000
@@ -94,110 +94,110 @@ function resetgame()
  -- drawing variables
  blinkspeed=4
  countdown=false
-	dying=false
-	transition=false
+ dying=false
+ transition=false
 
-	-- particle variables
+ -- particle variables
  titleparticles={}
  explparticles={}
  particlenum=50
  for _=0,particlenum do
   local p=newparticle()
   p:initial()
- 	add(titleparticles,p)
+  add(titleparticles,p)
  end
  nextlevel()
  music(0)
 end
 
 function update_main()
-	-- first level musical intro
-	if countdown then
-		if (frames-startframe) > 60 then
-			countdown=false
+ -- first level musical intro
+ if countdown then
+  if (frames-startframe) > 60 then
+   countdown=false
    transition=false
-			music(-1)
-		end
-		return
-	end
-
-	-- check for particles first
-	for p in all(explparticles) do
-		p:update()
-		if p.age > p.maxage then
-			del(explparticles,p)
-		end
-	end
-
-	-- dying animation
- if dying then
-		if (frames-deathframe) < 25 then
-			if ship.direc==0 then ship.x-=ship.spd
- 		elseif ship.direc==1 then ship.x+=ship.spd
- 		elseif ship.direc==2 then ship.y-=ship.spd
- 		elseif ship.direc==3 then ship.y+=ship.spd end
- 	else
- 		-- reset ship after death
- 		ship.x, ship.y=startx, starty
- 		ship.spd=0
- 		dying=false
- 		moving=false
- 		-- game over
- 		if lives==0 then
- 			-- if new high score, go to name entry
- 			if checkhs() then
- 				state=4
- 				letterptr=0
- 				letternum=2
- 				camera()
- 				particlenum=50
- 				newhs={score,#alphabet,#alphabet,#alphabet}
- 				for _=0,particlenum do
-  				local p=newparticle()
-  				p:initial()
- 					add(titleparticles,p)
- 				end
- 			-- otherwise main menu
- 			else
- 				state=3
- 			end
- 		end
- 	end
- 	return
+   music(-1)
+  end
+  return
  end
 
-	-- transitioning between levels
-	if transition then
-		moving=false
-		ship.spd=0
-		bullets={}
-		enemybullets={}
-		if btnp(4) or btnp(5) then
+ -- check for particles first
+ for p in all(explparticles) do
+  p:update()
+  if p.age > p.maxage then
+   del(explparticles,p)
+  end
+ end
+
+ -- dying animation
+ if dying then
+  if (frames-deathframe) < 25 then
+   if ship.direc==0 then ship.x-=ship.spd
+   elseif ship.direc==1 then ship.x+=ship.spd
+   elseif ship.direc==2 then ship.y-=ship.spd
+   elseif ship.direc==3 then ship.y+=ship.spd end
+  else
+   -- reset ship after death
+   ship.x, ship.y=startx, starty
+   ship.spd=0
+   dying=false
+   moving=false
+   -- game over
+   if lives==0 then
+    -- if new high score, go to name entry
+    if checkhs() then
+     state=4
+     letterptr=0
+     letternum=2
+     camera()
+     particlenum=50
+     newhs={score,#alphabet,#alphabet,#alphabet}
+     for _=0,particlenum do
+      local p=newparticle()
+      p:initial()
+      add(titleparticles,p)
+     end
+    -- otherwise main menu
+    else
+     state=3
+    end
+   end
+  end
+  return
+ end
+
+ -- transitioning between levels
+ if transition then
+  moving=false
+  ship.spd=0
+  bullets={}
+  enemybullets={}
+  if btnp(4) or btnp(5) then
    countdown=true
    startframe=frames
-			nextlevel()
-			cam.x=ship.x-(screen/2)
- 		cam.y=ship.y-(screen/2)
- 		camera(cam.x,cam.y)
- 		music(4)
-		end
-		return
-	end
+   nextlevel()
+   cam.x=ship.x-(screen/2)
+   cam.y=ship.y-(screen/2)
+   camera(cam.x,cam.y)
+   music(4)
+  end
+  return
+ end
 
-	-- update enemies
-	for e in all(enemies) do
+ -- update enemies
+ for e in all(enemies) do
   if not(e.bullet) then
    local mapx=8*e.x
    local mapy=8*e.y
    if (cam.x <= mapx and (mapx+24) <= (cam.x+screen)) and (cam.y <= mapy and (mapy+24) <= (cam.y+screen)) then
     e.bullet=true
     add(enemybullets,enemybullet(mapx+12,mapy+12,e))
-				sfx(5)
+    sfx(5)
    end
   end
  end
 
-	-- update enemy bullets
+ -- update enemy bullets
  for eb in all(enemybullets) do
   eb:update()
   eb:collide()
@@ -215,7 +215,7 @@ function update_main()
   moving=true
  elseif btn(1) then
   ship.direc=1
- 	moving=true
+  moving=true
  elseif btn(2) then
   ship.direc=2
   moving=true
@@ -224,9 +224,9 @@ function update_main()
   moving=true
  end
 
-	-- update player sprite
-	if moving then
-		ship.spd=mid(0,ship.spd+shipaccel,maxshipspd)
+ -- update player sprite
+ if moving then
+  ship.spd=mid(0,ship.spd+shipaccel,maxshipspd)
  end
  if ship.direc==0 then
   ship.x-=ship.spd
@@ -246,12 +246,12 @@ function update_main()
   ship.flp=true
  end
 
-	-- pause button
+ -- pause button
  if btnp(4) then
   state=2
  end
 
-	-- fire bullet
+ -- fire bullet
  if btnp(5) then
   if count(bullets)<bulletlimit then
    add(bullets,newbullet())
@@ -262,61 +262,61 @@ function update_main()
   end
  end
 
-	-- update ship and bullet wrapping
+ -- update ship and bullet wrapping
  if ship.x < 0 then
   ship.x=mapsize-1
   for b in all(bullets) do
-  	b.x+=mapsize
+   b.x+=mapsize
   end
   for p in all(explparticles) do
-  	p.x+=mapsize
+   p.x+=mapsize
   end
   for eb in all(enemybullets) do
-  	eb.x+=mapsize
+   eb.x+=mapsize
   end
  elseif ship.x > mapsize then
   ship.x=1
   for b in all(bullets) do
-  	b.x-=mapsize
+   b.x-=mapsize
   end
   for p in all(explparticles) do
-  	p.x-=mapsize
+   p.x-=mapsize
   end
   for eb in all(enemybullets) do
-  	eb.x-=mapsize
+   eb.x-=mapsize
   end
  end
 
  if ship.y < 0 then
   ship.y=mapsize-1
   for b in all(bullets) do
-  	b.y+=mapsize
+   b.y+=mapsize
   end
   for p in all(explparticles) do
-  	p.y+=mapsize
+   p.y+=mapsize
   end
   for eb in all(enemybullets) do
-  	eb.y+=mapsize
+   eb.y+=mapsize
   end
  elseif ship.y > mapsize then
   ship.y=1
   for b in all(bullets) do
-  	b.y-=mapsize
+   b.y-=mapsize
   end
   for p in all(explparticles) do
-  	p.y-=mapsize
+   p.y-=mapsize
   end
   for eb in all(enemybullets) do
-  	eb.y-=mapsize
+   eb.y-=mapsize
   end
  end
 
-	-- check for death
+ -- check for death
  if shipcollision() then
   death()
  end
 
-	-- check if level end
+ -- check if level end
  if #enemies==0 then
   transition=true
   clearbullets()
@@ -328,84 +328,84 @@ function update_main()
 end
 
 function update_title()
-	for _=0,particlenum-#titleparticles do
-		add(titleparticles,newparticle())
-	end
+ for _=0,particlenum-#titleparticles do
+  add(titleparticles,newparticle())
+ end
 
-	for p in all(titleparticles) do
-		p:update()
-	end
+ for p in all(titleparticles) do
+  p:update()
+ end
 
-	-- if left or right, switch menus
-	if btnp(0) or btnp(1) then
-		viewhs=not viewhs
-	-- if ❎ and on main view, enter game
+ -- if left or right, switch menus
+ if btnp(0) or btnp(1) then
+  viewhs=not viewhs
+ -- if ❎ and on main view, enter game
  elseif btnp(5) and not viewhs then
- 	flashframe=0
- 	blinkspeed=1
- 	countdown=true
- 	sfx(2)
+  flashframe=0
+  blinkspeed=1
+  countdown=true
+  sfx(2)
  end
 
  -- flash menu for 30 frames
  if countdown then
-		flashframe+=1
-		if flashframe>=30 then
-			state=1
-			music(4)
-			startframe=frames
-			cam.x=ship.x-(screen/2)
- 		cam.y=ship.y-(screen/2)
- 		camera(cam.x,cam.y)
-		end
+  flashframe+=1
+  if flashframe>=30 then
+   state=1
+   music(4)
+   startframe=frames
+   cam.x=ship.x-(screen/2)
+   cam.y=ship.y-(screen/2)
+   camera(cam.x,cam.y)
+  end
  end
 end
 
 function update_hs()
-	-- generate background effect
-	for _=0,particlenum-#titleparticles do
-		add(titleparticles,newparticle())
-	end
+ -- generate background effect
+ for _=0,particlenum-#titleparticles do
+  add(titleparticles,newparticle())
+ end
 
-	for p in all(titleparticles) do
-		p:update()
-	end
+ for p in all(titleparticles) do
+  p:update()
+ end
 
-	-- move cursor
-	if btnp(0) then
-		letterptr=(letterptr-1)%#alphabet
-	elseif btnp(1) then
-		letterptr=(letterptr+1)%#alphabet
-	elseif btnp(2) then
-		letterptr=(letterptr-6)%#alphabet
-	elseif btnp(3) then
-		letterptr=(letterptr+6)%#alphabet
-	end
+ -- move cursor
+ if btnp(0) then
+  letterptr=(letterptr-1)%#alphabet
+ elseif btnp(1) then
+  letterptr=(letterptr+1)%#alphabet
+ elseif btnp(2) then
+  letterptr=(letterptr-6)%#alphabet
+ elseif btnp(3) then
+  letterptr=(letterptr+6)%#alphabet
+ end
 
-	-- enter/delete letter
-	if btnp(4) then
-		letternum=mid(2,letternum-1,5)
-		newhs[letternum]=#alphabet
-		sfx(15)
-	elseif btnp(5) then
-		if letternum==5 then
-			addhs()
-			resetgame()
-			sfx(14)
-		else
-			newhs[letternum]=letterptr+1
-			letternum=mid(2,letternum+1,5)
-			sfx(15)
-		end
-	end
+ -- enter/delete letter
+ if btnp(4) then
+  letternum=mid(2,letternum-1,5)
+  newhs[letternum]=#alphabet
+  sfx(15)
+ elseif btnp(5) then
+  if letternum==5 then
+   addhs()
+   resetgame()
+   sfx(14)
+  else
+   newhs[letternum]=letterptr+1
+   letternum=mid(2,letternum+1,5)
+   sfx(15)
+  end
+ end
 end
 
 function update_pause()
-	if btnp(0) then
-		minimapset=(minimapset-1)%3
-	elseif btnp(1) then
-		minimapset=(minimapset+1)%3
-	end
+ if btnp(0) then
+  minimapset=(minimapset-1)%3
+ elseif btnp(1) then
+  minimapset=(minimapset+1)%3
+ end
 
  if btnp(4) then
   state=1
@@ -419,7 +419,7 @@ function update_gameover()
 end
 
 function draw_gameover()
-	rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
+ rectfill(cam.x,cam.y+(screen/3),cam.x+screen,cam.y+(2*screen/3),1)
  fancytext("game over",cam.x+centertext("game over"),cam.y+50,7,5)
  local score="final score: "..score
  fancytext(score,cam.x+centertext(score),cam.y+62,7,5)
@@ -427,52 +427,52 @@ function draw_gameover()
 end
 
 function draw_title()
-	if viewhs then
-		drawhs()
+ if viewhs then
+  drawhs()
  else
- 	titlescreen()
+  titlescreen()
  end
 end
 
 function draw_hs_entry()
-	cls()
-	for p in all(titleparticles) do
-		p:draw()
-	end
-	fancytext("new high score!!",centertext("new high score!!"),8,11,1)
-	fancytext("score: "..score,centertext("score: "..score),16,14,2)
-	for i=1,#alphabet do
-		local drawx=10+20*((i-1)%6)
-		local drawy=40+15*flr((i-1)/6)
-		fancytext(alphabet[i],drawx,drawy,7,5)
-	end
+ cls()
+ for p in all(titleparticles) do
+  p:draw()
+ end
+ fancytext("new high score!!",centertext("new high score!!"),8,11,1)
+ fancytext("score: "..score,centertext("score: "..score),16,14,2)
+ for i=1,#alphabet do
+  local drawx=10+20*((i-1)%6)
+  local drawy=40+15*flr((i-1)/6)
+  fancytext(alphabet[i],drawx,drawy,7,5)
+ end
 
-	local newinitial=alphabet[newhs[2]]..alphabet[newhs[3]]..alphabet[newhs[4]]
-	fancytext(newinitial,centertext(newinitial),screen-16,7,5)
+ local newinitial=alphabet[newhs[2]]..alphabet[newhs[3]]..alphabet[newhs[4]]
+ fancytext(newinitial,centertext(newinitial),screen-16,7,5)
 
-	if letternum==5 then
-		fancytext("press ❎ to enter score",centertext("press ❎ to enter score"),screen-8,7,5)
-	end
+ if letternum==5 then
+  fancytext("press ❎ to enter score",centertext("press ❎ to enter score"),screen-8,7,5)
+ end
 
-	if (frames%20 < 10) then
-		spr(34,7+20*((letterptr)%6),30+15*flr((letterptr)/6))
-	else
-		spr(34,7+20*((letterptr)%6),28+15*flr((letterptr)/6))
-	end
+ if (frames%20 < 10) then
+  spr(34,7+20*((letterptr)%6),30+15*flr((letterptr)/6))
+ else
+  spr(34,7+20*((letterptr)%6),28+15*flr((letterptr)/6))
+ end
 end
 
 function draw_pause()
-	rectfill(cam.x,cam.y+40,cam.x+screen,cam.y+59,1)
+ rectfill(cam.x,cam.y+40,cam.x+screen,cam.y+59,1)
  fancytext("paused",cam.x+centertext("paused"),cam.y+43,7,5)
-	local settingtxt=""
-	if minimapset==0 then
-		settingtxt="< minimap: no border >"
-	elseif minimapset==1 then
-		settingtxt="< minimap: outline >"
-	else
-		settingtxt="< minimap: full background >"
-	end
-	fancytext(settingtxt,cam.x+centertext(settingtxt),cam.y+52,7,5)
+ local settingtxt=""
+ if minimapset==0 then
+  settingtxt="< minimap: no border >"
+ elseif minimapset==1 then
+  settingtxt="< minimap: outline >"
+ else
+  settingtxt="< minimap: full background >"
+ end
+ fancytext(settingtxt,cam.x+centertext(settingtxt),cam.y+52,7,5)
 end
 
 function draw_main()
@@ -487,33 +487,33 @@ function draw_main()
  end
 
  for p in all(explparticles) do
- 	p:draw()
+  p:draw()
  end
-	if transition and not countdown then
-		rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,1)
-		fancytext("level complete!",cam.x+centertext("level complete!"),cam.y+52,7,5)
-		spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
-	elseif dying then
-		spr(17,ship.x,ship.y)
-	elseif countdown then
+ if transition and not countdown then
+  rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,1)
+  fancytext("level complete!",cam.x+centertext("level complete!"),cam.y+52,7,5)
+  spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
+ elseif dying then
+  spr(17,ship.x,ship.y)
+ elseif countdown then
   local phrase=""
   if transition then
    phrase="level: "..level
   else
    phrase="blast off!"
   end
-		spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
-		rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,1)
-		if (frames-startframe) < 10 then
-			fancytext(phrase,cam.x+5*(frames-startframe),cam.y+52,7,5)
-		elseif (frames-startframe) < 40 then
-			fancytext(phrase,cam.x+50,cam.y+52,7,5)
-		else
-			fancytext(phrase,cam.x+5*(frames-startframe-30),cam.y+52,7,5)
-		end
-	else
-		spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
-	end
+  spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
+  rectfill(cam.x,cam.y+49,cam.x+screen,cam.y+59,1)
+  if (frames-startframe) < 10 then
+   fancytext(phrase,cam.x+5*(frames-startframe),cam.y+52,7,5)
+  elseif (frames-startframe) < 40 then
+   fancytext(phrase,cam.x+50,cam.y+52,7,5)
+  else
+   fancytext(phrase,cam.x+5*(frames-startframe-30),cam.y+52,7,5)
+  end
+ else
+  spr(ship.sprt, ship.x, ship.y, 1, 1, ship.flp, ship.flp)
+ end
 
  drawbar()
  minimap()
@@ -537,13 +537,13 @@ function deleteenemy(_x,_y)
  --create explosion effect
 
  for i=0,23 do
- 	for j=0,23 do
-			--pget needs the on-screen coords
- 		local col=pget(8*_x+i,8*_y+j)
- 		if col~=0 then
- 			add(explparticles,explparticle(8*_x+i,8*_y+j,col))
- 		end
- 	end
+  for j=0,23 do
+   --pget needs the on-screen coords
+   local col=pget(8*_x+i,8*_y+j)
+   if col~=0 then
+    add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+   end
+  end
  end
 
  for i=0,2 do
@@ -552,22 +552,22 @@ function deleteenemy(_x,_y)
   end
  end
 
-	sfx(0)
+ sfx(0)
  score+=50
  extralife()
 end
 
 -- destory one of the 'bubbles'
 function destroymodule(_x,_y,_n)
-	for i=0,7 do
- 	for j=0,7 do
- 		local col=pget(8*_x+i,8*_y+j)
- 		if col~=0 then
- 			add(explparticles,explparticle(8*_x+i,8*_y+j,col))
- 		end
- 	end
+ for i=0,7 do
+  for j=0,7 do
+   local col=pget(8*_x+i,8*_y+j)
+   if col~=0 then
+    add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+   end
+  end
  end
-	sfx(4)
+ sfx(4)
  mset(_x,_y,_n+6)
  score+=10
  extralife()
@@ -575,15 +575,15 @@ end
 
 -- destroy meteor/mine
 function deleteobstacle(_x,_y)
-	for i=0,7 do
- 	for j=0,7 do
- 		local col=pget(8*_x+i,8*_y+j)
- 		if col~=0 then
- 			add(explparticles,explparticle(8*_x+i,8*_y+j,col))
- 		end
- 	end
+ for i=0,7 do
+  for j=0,7 do
+   local col=pget(8*_x+i,8*_y+j)
+   if col~=0 then
+    add(explparticles,explparticle(8*_x+i,8*_y+j,col))
+   end
+  end
  end
-	sfx(3)
+ sfx(3)
  mset(_x,_y,0)
  score+=5
  extralife()
@@ -595,7 +595,7 @@ function enemybullet(_x,_y,_e)
  b.y=_y
  b.angle=atan2((ship.x-_x),(ship.y-_y))
  b.update=function(this)
- 	-- enemy bullets should be slightly slower than players
+  -- enemy bullets should be slightly slower than players
   b.x+=(bulletspeed-2)*cos(b.angle)
   b.y+=(bulletspeed-2)*sin(b.angle)
   if b.y < cam.y or b.y > (cam.y+screen) then
@@ -627,12 +627,12 @@ function death()
  sfx(0)
  dying=true
  deathframe=frames
-	clearbullets()
-	for i=0,7 do
- 	for j=0,7 do
- 		local col=pget(ship.x+i,ship.y+j)
- 		add(explparticles,explparticle(ship.x+i,ship.y+j,col))
- 	end
+ clearbullets()
+ for i=0,7 do
+  for j=0,7 do
+   local col=pget(ship.x+i,ship.y+j)
+   add(explparticles,explparticle(ship.x+i,ship.y+j,col))
+  end
  end
 end
 
@@ -707,8 +707,8 @@ function newbullet()
   if fget(sprn,0) then
    del(bullets,b)
    if e.h > 1 then
-   	e.h-=1
-   	destroymodule(sprx,spry,sprn)
+    e.h-=1
+    destroymodule(sprx,spry,sprn)
    else
     deleteenemy(e.x,e.y)
     del(enemies,e)
@@ -731,15 +731,15 @@ end
 
 -- check if player earns extra life
 function extralife()
-	-- if extra life has been earned at that level
-	-- is stored in bit flags
-	local check=flr(score/lifepoints)
-	local mask=shl(1,check)
-	if band(mask,lifecheck)~=0 then
-		lives+=1
-		lifecheck-=mask
-		sfx(14)
-	end
+ -- if extra life has been earned at that level
+ -- is stored in bit flags
+ local check=flr(score/lifepoints)
+ local mask=shl(1,check)
+ if band(mask,lifecheck)~=0 then
+  lives+=1
+  lifecheck-=mask
+  sfx(14)
+ end
 end
 -->8
 -- drawing functions
@@ -750,28 +750,28 @@ end
 
 -- draws text with a border
 function fancytext(_t,_x,_y,_c1,_c2)
-	print(_t,_x-1,_y-1,_c2)
-	print(_t,_x,_y-1,_c2)
-	print(_t,_x+1,_y-1,_c2)
-	print(_t,_x-1,_y,_c2)
-	print(_t,_x+1,_y,_c2)
-	print(_t,_x-1,_y+1,_c2)
-	print(_t,_x,_y+1,_c2)
-	print(_t,_x+1,_y+1,_c2)
+ print(_t,_x-1,_y-1,_c2)
+ print(_t,_x,_y-1,_c2)
+ print(_t,_x+1,_y-1,_c2)
+ print(_t,_x-1,_y,_c2)
+ print(_t,_x+1,_y,_c2)
+ print(_t,_x-1,_y+1,_c2)
+ print(_t,_x,_y+1,_c2)
+ print(_t,_x+1,_y+1,_c2)
 
-	print(_t,_x,_y,_c1)
+ print(_t,_x,_y,_c1)
 end
 
 function blinktext(_t,_x,_y,_c1,_c2,_c3)
-	if frames%(4*blinkspeed) < blinkspeed then
-		print(_t,_x,_y,_c1)
-	elseif frames%(4*blinkspeed) < (2*blinkspeed) then
-		print(_t,_x,_y,_c2)
-	elseif frames%(4*blinkspeed) < (3*blinkspeed) then
-		print(_t,_x,_y,_c3)
-	else
-		print(_t,_x,_y,_c2)
-	end
+ if frames%(4*blinkspeed) < blinkspeed then
+  print(_t,_x,_y,_c1)
+ elseif frames%(4*blinkspeed) < (2*blinkspeed) then
+  print(_t,_x,_y,_c2)
+ elseif frames%(4*blinkspeed) < (3*blinkspeed) then
+  print(_t,_x,_y,_c3)
+ else
+  print(_t,_x,_y,_c2)
+ end
 end
 
 -- draws main title screen
@@ -779,9 +779,9 @@ function titlescreen()
  cls()
  -- must break up title sprite
  -- due to map/sprite limitations
-	for p in all(titleparticles) do
-		p:draw()
-	end
+ for p in all(titleparticles) do
+  p:draw()
+ end
  spr(64,0,18,5,4)
  spr(53,40,10,4,5)
  spr(73,72,18,7,4)
@@ -789,17 +789,17 @@ function titlescreen()
  spr(32,16,50,2,2)
  fancytext("by aquova",centertext("by aquova"),screen-32,11,1)
  spr(2,60+2*cos(t()/3),72,1,1,true,false)
-	fancytext("press ⬅️ ➡️ for high scores",centertext("press ⬅️ ➡️ for high scores"),screen-16,11,1)
-	blinktext("press ❎ to start",centertext("press ❎ to start"),screen-8,6,12,13)
+ fancytext("press ⬅️ ➡️ for high scores",centertext("press ⬅️ ➡️ for high scores"),screen-16,11,1)
+ blinktext("press ❎ to start",centertext("press ❎ to start"),screen-8,6,12,13)
 end
 
 function minimap()
  local minix=cam.x+(screen-40)
  local miniy=cam.y+(screen-40)
-	if minimapset==1 then
-		rect(minix,miniy,cam.x+screen-1,cam.y+screen-1,1)
+ if minimapset==1 then
+  rect(minix,miniy,cam.x+screen-1,cam.y+screen-1,1)
  elseif minimapset==2 then
- 	rectfill(minix,miniy,cam.x+screen-1,cam.y+screen-1,1)
+  rectfill(minix,miniy,cam.x+screen-1,cam.y+screen-1,1)
  end
  for e in all(enemies) do
   local localx=e.x*320/mapsize
@@ -813,30 +813,30 @@ end
 
 -- draws background
 function drawmap()
-	-- how parallax works:
-	-- move camera to 1/2 or 1/4 cam, then draw
-	-- this is done in a loop to make things easier to see
-	local i=8
-	local par_tbl={0b11111,0x80,0,0x40}
-	repeat
-		i/=2
-		camera(cam.x/i,cam.y/i)
- 	local topx=flr(cam.x/(128*i))*128
- 	local topy=flr(cam.y/(128*i))*128
- 	local colx=topx/8
- 	local coly=topy/8
- 	if colx < 0 then
-  	colx=48
- 	end
- 	if coly < 0 then
-  	coly=48
- 	end
+ -- how parallax works:
+ -- move camera to 1/2 or 1/4 cam, then draw
+ -- this is done in a loop to make things easier to see
+ local i=8
+ local par_tbl={0b11111,0x80,0,0x40}
+ repeat
+  i/=2
+  camera(cam.x/i,cam.y/i)
+  local topx=flr(cam.x/(128*i))*128
+  local topy=flr(cam.y/(128*i))*128
+  local colx=topx/8
+  local coly=topy/8
+  if colx < 0 then
+   colx=48
+  end
+  if coly < 0 then
+   coly=48
+  end
 
- 	map(colx%(64/i),coly%(64/i),topx,topy,16,16,par_tbl[i])
- 	map((colx+16)%(64/i),coly%(64/i),topx+screen,topy,16,16,par_tbl[i])
- 	map(colx%(64/i),(coly+16)%(64/i),topx,topy+screen,16,16,par_tbl[i])
- 	map((colx+16)%(64/i),(coly+16)%(64/i),topx+screen,topy+screen,16,16,par_tbl[i])	
-	until i==1
+  map(colx%(64/i),coly%(64/i),topx,topy,16,16,par_tbl[i])
+  map((colx+16)%(64/i),coly%(64/i),topx+screen,topy,16,16,par_tbl[i])
+  map(colx%(64/i),(coly+16)%(64/i),topx,topy+screen,16,16,par_tbl[i])
+  map((colx+16)%(64/i),(coly+16)%(64/i),topx+screen,topy+screen,16,16,par_tbl[i])
+ until i==1
 end
 
 -- draws top ui
@@ -850,44 +850,44 @@ end
 
 -- destruction particle effect
 function explparticle(_x,_y,_col)
-	local p={}
-	p.x=_x
-	p.y=_y
-	p.age=0
-	p.maxage=flr(rnd(20))+20
-	p.vx=rnd(2)-1
-	p.vy=rnd(2)-1
-	p.col=_col
-	p.update=function(this)
-		p.age+=1
-		p.x+=p.vx
-		p.y+=p.vy
-	end
-	p.draw=function(this)
-		pset(p.x,p.y,p.col)
-	end
-	return p
+ local p={}
+ p.x=_x
+ p.y=_y
+ p.age=0
+ p.maxage=flr(rnd(20))+20
+ p.vx=rnd(2)-1
+ p.vy=rnd(2)-1
+ p.col=_col
+ p.update=function(this)
+  p.age+=1
+  p.x+=p.vx
+  p.y+=p.vy
+ end
+ p.draw=function(this)
+  pset(p.x,p.y,p.col)
+ end
+ return p
 end
 
 -- particle for title screen
 function newparticle()
-	local p={}
-	p.x=0
-	p.y=flr(rnd(screen))
-	p.spd=rnd(3)+2
-	p.initial=function(this)
-		p.x=flr(rnd(screen))
-	end
-	p.update=function(this)
-		p.x+=p.spd
-		if p.x > screen then
-			del(titleparticles,p)
-		end
-	end
-	p.draw=function(this)
-		pset(p.x,p.y,5)
-	end
-	return p
+ local p={}
+ p.x=0
+ p.y=flr(rnd(screen))
+ p.spd=rnd(3)+2
+ p.initial=function(this)
+  p.x=flr(rnd(screen))
+ end
+ p.update=function(this)
+  p.x+=p.spd
+  if p.x > screen then
+   del(titleparticles,p)
+  end
+ end
+ p.draw=function(this)
+  pset(p.x,p.y,5)
+ end
+ return p
 end
 -->8
 -- level loading functions
@@ -902,12 +902,12 @@ function nextlevel()
 end
 
 function clearbullets()
-	bullets={}
-	for e in all(enemies) do
- 	e.bullet=false
+ bullets={}
+ for e in all(enemies) do
+  e.bullet=false
  end
-	enemybullets={}
-	explparticles={}
+ enemybullets={}
+ explparticles={}
 end
 
 -- generates new meteors/mines
@@ -929,29 +929,29 @@ end
 
 -- generates new ships
 function setenemies()
-	-- every 3 levels, the max number of enemies increases
+ -- every 3 levels, the max number of enemies increases
  local enemynum=ceil(level/2)+2
  for i=0,enemynum do
   local e={}
-		-- ensure enemy isn't drawn on player
+  -- ensure enemy isn't drawn on player
   -- lua has no continue keyword, use a goto
-		::retry::
- 	e.x=flr(rnd((mapsize/8)-2))
- 	e.y=flr(rnd((mapsize/8)-2))
+  ::retry::
+  e.x=flr(rnd((mapsize/8)-2))
+  e.y=flr(rnd((mapsize/8)-2))
 
- 	-- check distances, ensure new enemies are
- 	-- far enough away from player and other enemies
- 	local playerdist=sqrt((8*e.x-startx)^2 + (8*e.y-starty)^2)
-		if playerdist<(3*screen/4) then
-			goto retry
-		end
+  -- check distances, ensure new enemies are
+  -- far enough away from player and other enemies
+  local playerdist=sqrt((8*e.x-startx)^2 + (8*e.y-starty)^2)
+  if playerdist<(3*screen/4) then
+   goto retry
+  end
 
-		for n in all(enemies) do
-			local dist=sqrt((e.x-n.x)^2 + (e.y-n.y)^2)
-			if dist<3 then
-				goto retry
-			end
-		end
+  for n in all(enemies) do
+   local dist=sqrt((e.x-n.x)^2 + (e.y-n.y)^2)
+   if dist<3 then
+    goto retry
+   end
+  end
 
   e.h=6
   e.bullet=false
@@ -976,73 +976,73 @@ end
 -- i+1 -> i+3 - three initials
 
 function reseths()
-	local hs1={2500,1,19,2}
-	local hs2={1000,22,14,12}
-	local hs3={500,1,22,1}
-	local hs4={400,13,15,13}
-	local hs5={250,20,15,5}
-	hs={hs1,hs2,hs3,hs4,hs5}
-	savehs()
+ local hs1={2500,1,19,2}
+ local hs2={1000,22,14,12}
+ local hs3={500,1,22,1}
+ local hs4={400,13,15,13}
+ local hs5={250,20,15,5}
+ hs={hs1,hs2,hs3,hs4,hs5}
+ savehs()
 end
 
 function loadhs()
-	-- if uninitialized
-	if dget(0)==0 then
-		reseths()
-		dset(0,1)
-	else
-		for i=0,(#hs-1) do
-			for j=1,4 do
-				hs[i+1][j]=dget((#hs-1)*i+j)
-			end
-		end
-	end
+ -- if uninitialized
+ if dget(0)==0 then
+  reseths()
+  dset(0,1)
+ else
+  for i=0,(#hs-1) do
+   for j=1,4 do
+    hs[i+1][j]=dget((#hs-1)*i+j)
+   end
+  end
+ end
 end
 
 function savehs()
-	for i=0,(#hs-1) do
-		for j=1,4 do
-			dset((#hs-1)*i+j,hs[i+1][j])
-		end
-	end
+ for i=0,(#hs-1) do
+  for j=1,4 do
+   dset((#hs-1)*i+j,hs[i+1][j])
+  end
+ end
 end
 
 -- draws the high score record display
 function drawhs()
-	cls()
-	for p in all(titleparticles) do
-		p:draw()
-	end
+ cls()
+ for p in all(titleparticles) do
+  p:draw()
+ end
 
-	fancytext("high scores",centertext("high scores"),16,11,1)
+ fancytext("high scores",centertext("high scores"),16,11,1)
 
-	for i=1,#hs do
-		local initial=alphabet[hs[i][2]]..alphabet[hs[i][3]]..alphabet[hs[i][4]]
-		fancytext(initial,20,32+8*i,7,5)
-		fancytext(hs[i][1],screen-20-4*#tostr(hs[i][1]),32+8*i,7,5)
-	end
+ for i=1,#hs do
+  local initial=alphabet[hs[i][2]]..alphabet[hs[i][3]]..alphabet[hs[i][4]]
+  fancytext(initial,20,32+8*i,7,5)
+  fancytext(hs[i][1],screen-20-4*#tostr(hs[i][1]),32+8*i,7,5)
+ end
 
-	fancytext("press ⬅️ ➡️ for title screen",centertext("press ⬅️ ➡️ for title screen"),screen-16,11,1)
+ fancytext("press ⬅️ ➡️ for title screen",centertext("press ⬅️ ➡️ for title screen"),screen-16,11,1)
 end
 
 -- checks if current score should be on hs list
 function checkhs()
-	return (score > hs[#hs][1])
+ return (score > hs[#hs][1])
 end
 
 -- adds new high score to list
 function addhs()
-	for i=(#hs-1),1,-1 do
-		if newhs[1] > hs[i][1] then
-			hs[i+1]=hs[i]
-		else
-			hs[i+1]=newhs
-			savehs()
-			return
-		end
-	end
-	hs[1]=newhs
-	savehs()
+ for i=(#hs-1),1,-1 do
+  if newhs[1] > hs[i][1] then
+   hs[i+1]=hs[i]
+  else
+   hs[i+1]=newhs
+   savehs()
+   return
+  end
+ end
+ hs[1]=newhs
+ savehs()
 end
 __gfx__
 00000000000880000666680000044ff00000000000bbbb000000000000000b2b00000000b2b00000000000000000000000000000000000000000000000000000
