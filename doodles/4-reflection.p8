@@ -18,7 +18,8 @@ function _update()
 end
 
 function _draw()
-	cls()
+	cls(14)
+	circfill(64,water,12,10)
 	print("pico-8 doodle iv",35,50,7)
 	line(0,water,scrn,water,6)
 	--sspr(8,0,player.w,player.h,player.x,player.y-player.h,player.w,player.h,player.f,false)
