@@ -235,42 +235,74 @@ function update_main()
 	end
 
 	reset_frames=0
+ local startx,starty=p1.x,p1.y
 	main_input()
 	update_board()
-	if not remaining_moves() then
-		transition=true
-		high_scores[level]=max(high_scores[level],level_snow)
-		max_unlocked=max(max_unlocked,level+1)
-		save_game()
+ 
+	-- only check for moves if player has moved
+ if (p1.x~=startx) or (p1.y~=starty) then
+ 	if not remaining_moves() then
+ 		transition=true
+ 		high_scores[level]=max(high_scores[level],level_snow)
+ 		max_unlocked=max(max_unlocked,level+1)
+ 		save_game()
+ 	end
 	end
 end
 
 function main_input()
+	-- store initial position
+	local startx,starty=p1.x,p1.y
+	local valid_tiles={1,4}
+
  -- ignore input on ice
- -- may want to allow input when stationary
- if board[p1.y][p1.x]==4 then
+ if board[p1.y][p1.x]==4 and p1.d~="n" then
+ 	-- for each orientation,
+ 	-- first check if on edge, if so make neutral and stop
+ 	-- then check if going to run into invalid tile
  	if p1.d=="u" then
-			p1.y=max(1,p1.y-1)
+   if p1.y==1 then
+   	p1.d="n"
+   elseif not contains(valid_tiles,board[p1.y-1][p1.x]) then
+				p1.d="n"
+			else
+				p1.y-=1
+			end
   elseif p1.d=="d" then
-			p1.y=min(p1.y+1,#board)
+   if p1.y==#board then
+   	p1.d="n"
+   elseif not contains(valid_tiles,board[p1.y+1][p1.x]) then
+				p1.d="n"
+			else
+				p1.y+=1
+			end
   elseif p1.d=="l" then
-			p1.x=max(1,p1.x-1)
+   if p1.x==1 then
+   	p1.d="n"
+   elseif not contains(valid_tiles,board[p1.y][p1.x-1]) then
+				p1.d="n"
+			else
+				p1.x-=1
+			end
   elseif p1.d=="r" then
-			p1.x=min(p1.x+1,#board[1])
+   if p1.x==#board[1] then
+   	p1.d="n"
+   elseif not contains(valid_tiles,board[p1.y][p1.x+1]) then
+				p1.d="n"
+			else
+				p1.x+=1
+			end
   end
  	return
  end
-	-- store initial position
-	local startx,starty=p1.x,p1.y
+
 	if btnp(⬅️) then
 		p1.x=max(1,p1.x-1)
 		p1.d="l"
 	elseif btnp(➡️) then
 		p1.x=min(p1.x+1,#board[1])
 		p1.d="r"
-	end
-
-	if btnp(⬆️) then
+	elseif btnp(⬆️) then
 		p1.y=max(1,p1.y-1)
 		p1.d="u"
 	elseif btnp(⬇️) then
@@ -279,14 +311,15 @@ function main_input()
 	end
 
 	-- if move would move off snow, don't move
-	local valid_tiles={1,4}
 	if not contains(valid_tiles,board[p1.y][p1.x]) then
 		p1.x,p1.y=startx,starty
 		return
 	end
 
-	level_snow+=1
-	sfx(1)
+ if (p1.x~=startx) or (p1.y~=starty) then
+		level_snow+=1
+		sfx(1)
+	end
 end
 
 function update_board()
@@ -296,49 +329,30 @@ function update_board()
 end
 
 function remaining_moves()
-	-- check if there are any moves left
-	-- need to follow ice paths to see if snow exists on the other side
- if p1.x > 1 then
-  for i=p1.x-1,1,-1 do
-   if board[p1.y][i]==1 then
-    return true
-   elseif board[p1.y][i]~=4 then
-    break
-   end
-  end
+-- implement breadth-first search
+ local q={} -- queue
+ local v={} -- visited
+ add(q,{p1.x,p1.y})
+ add(v,{p1.x,p1.y})
+ 
+ while #q~=0 do
+ 	local val=pop(q)
+ 	
+ 	local neighbors=calc_neighbors(val)
+ 	for n in all(neighbors) do
+ 		if not contains(v,n) then
+				if board[n[2]][n[1]]==1 then
+				 return true
+				end
+				-- only add ice to queue
+				if board[n[2]][n[1]]==4 then
+					add(q,n)
+				end
+				add(v,n)
+			end
+ 	end
  end
-
- if p1.x < #board[1] then
-  for i=p1.x+1,#board[1] do
-   if board[p1.y][i]==1 then
-    return true
-   elseif board[p1.y][i]~=4 then
-    break
-   end
-  end
- end
-
- if p1.y > 1 then
-  for i=p1.y-1,1,-1 do
-   if board[i][p1.x]==1 then
-    return true
-   elseif board[i][p1.x]~=4 then
-    break
-   end
-  end
- end
-
- if p1.y < #board then
-  for i=p1.y+1,#board do
-   if board[i][p1.x]==1 then
-    return true
-   elseif board[i][p1.x]~=4 then
-    break
-   end
-  end
- end
-
-	return false
+ return false
 end
 -->8
 -- levels
@@ -416,6 +430,15 @@ _levels={
   {1,1,1,1,3,1},
   {1,1,1,3,3,1},
 		{1,1,1,1,1,1}  		
+	},
+	{
+		{3,4,4,4,4},
+		{4,4,4,4,3},
+		{4,4,2,4,4},
+		{4,1,4,4,4},
+		{4,4,4,1,4},
+		{4,4,4,4,4},
+
 	}
 }
 
@@ -428,7 +451,8 @@ _meta_levels={
 	{8,2,2},
 	{17,4,3},
 	{31,3,4},
-	{35,6,1}
+	{35,6,1},
+	{2,3,3}
 }
 
 function get_level(val)
@@ -613,14 +637,49 @@ end
 -- checks if a table contains an element
 function contains(_tbl,_e)
 	for item in all(_tbl) do
-		if item==_e then
-			return true
+		if type(item)=="table" then
+			local all_matches=true
+			for i=1,#item do
+				if _e[i]~=item[i] then
+					all_matches=false
+					break
+				end
+			end
+			if all_matches then return true end
+		else
+			if item==_e then
+				return true
+			end
 		end
 	end
 	return false
 end
 
+-- pop element off queue-like table
+function pop(_tbl)
+	local val=_tbl[1]
+	del(_tbl,val)
+	return val
+end
 
+-- assuming _p is a table of {x,y}
+function calc_neighbors(_p)
+	local n={}
+	
+	-- what a 'meh' way to do this
+	local dirs={{0,1},{0,-1},{-1,0},{1,0}}
+	for i in all(dirs) do
+		local x=mid(1,_p[1]+i[1],#board[1])
+		local y=mid(1,_p[2]+i[2],#board)
+		
+		-- don't add original point to neighbor list
+		if (x~=_p[1]) or (y~=_p[2]) then
+			add(n,{x,y})
+		end
+	end	
+	
+	return n
+end
 -->8
 -- saving local data
 
