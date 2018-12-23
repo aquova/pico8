@@ -170,12 +170,16 @@ function draw_lvlselect()
 			rectfill(x,y,x+box_size-1,y+box_size-1,5)
    fillp()			
 		else
-			local score_txt=high_scores[lvl+1].."/"..get_max_score(lvl+1)
-			print(score_txt,x+ctext(score_txt,x,x+box_size),y+12,8)
+			local high=high_scores[lvl+1]
+			local lvl_max=get_max_score(lvl+1)
+			local pen_color=(high==lvl_max) and 9 or 8
+			printb(high,x+ctext(""..high,x,x+box_size),y+3,pen_color,0)
+			line(x+3,y+10,x+box_size-4,y+10,0)
+			printb(lvl_max,x+ctext(""..lvl_max,x,x+box_size),y+14,pen_color,0)
 		end
 
 		rect(x,y,x+box_size-1,y+box_size-1,0)
-		printb(lvl+1,x+ctext(""..lvl+1,x,x+box_size),y+3,8,0)
+		--printb(lvl+1,x+ctext(""..lvl+1,x,x+box_size),y+3,8,0)
 	end
 
 	local ptr_x=lvl_margin.x+box_size*(lvl_ptr%row_num)
