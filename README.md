@@ -4,7 +4,5 @@
 
 Some of my more interesting Pico-8 programs.
 
-Programs of note
-
 - Piconian
 - Snowman
