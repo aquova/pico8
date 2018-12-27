@@ -5,417 +5,428 @@ __lua__
 -- @aquova
 
 function _init()
-	cartdata("aquova_snowman")
-	menuitem(2,"main menu",return_2_title)
-	menuitem(3,"level select",goto_lvlselect)
+ -- generate persistent data, additional menu options
+ cartdata("aquova_snowman")
+ menuitem(2,"main menu",return_2_title)
+ menuitem(3,"level select",return_2_lvlselect)
 
-	screen=128
-	reset_time=30 -- frames held before reset
+ screen=128
+ reset_time=30 -- frames held before reset
 
+ -- game variables
  max_unlocked=1
-	load_data()
-	level_snow=0
-	game_over=false
-	reset_frames=0
+ load_data()
+ level_snow=0
+ game_over=false
+ reset_frames=0
 
-	transition=false
-	trans_down=true
-	instructions=false
-	restarting=false
-	instr_ptr=1
-	trans_y=-100
-	title_ptr=0
-	snowflakes={}
+ -- level transition variables
+ transition=false
+ trans_down=true
+ instructions=false
+ restarting=false
+ trans_y=-100
 
-	-- level select values
-	lvl_margin={x=9,y=22}
-	box_size=22
-	row_num=(screen-2*lvl_margin.x)/box_size
-	lvl_ptr=0
+ -- title screen variables
+ instr_ptr=1
+ title_ptr=0
+ snowflakes={}
 
-	board={}
-	p1={} -- in board coords
-	margin={}
-	
-	-- set transparent colors
-	palt(0,false)
-	palt(14,true)
-	
-	create_snow()
-	_upd=update_title
-	_drw=draw_title
+ -- level select values
+ lvl_margin={x=9,y=22}
+ box_size=22
+ row_num=(screen-2*lvl_margin.x)/box_size
+ lvl_ptr=0
+
+ board={}
+ p1={} -- in board coords
+ margin={}
+
+ -- set transparent colors
+ palt(0,false)
+ palt(14,true)
+
+ -- Generate title screen particles
+ create_snow()
+ _upd=update_title
+ _drw=draw_title
 end
 
 function _update()
-	_upd()
+ _upd()
 end
 
 function _draw()
-	_drw()
+ _drw()
 end
 
 -- menu item functions
 function return_2_title()
-	_upd=update_title
-	_drw=draw_title
+ _upd=update_title
+ _drw=draw_title
 end
 
-function goto_lvlselect()
+function return_2_lvlselect()
  lvl_ptr=0
-	_upd=update_lvlselect
-	_drw=draw_lvlselect
+ _upd=update_lvlselect
+ _drw=draw_lvlselect
 end
 -->8
 -- title screen / lvl select
 
 function update_title()
+ -- if viewing instructions
  if instructions then
+  -- lower/raise page into view
   if trans_down then
- 		trans_y=min(0,trans_y+5)
-		else
-			trans_y=max(-100,trans_y-5)
-			if trans_y==-100 then
-				trans_down=true
-				instr_ptr=1
-				instructions=false
-			end
-		end
-		
-		if trans_y==0 then	
-			if btnp(❎) then
-				trans_down=false
- 		elseif btnp(🅾️) or btnp(➡️) then
-				instr_ptr+=1
-				if instr_ptr>4 then
-					trans_down=false
-				end
-			elseif btnp(⬅️) then
-				instr_ptr=max(1,instr_ptr-1)
- 		end
- 	end
+   trans_y=min(0,trans_y+5)
+  else
+   trans_y=max(-100,trans_y-5)
+   if trans_y==-100 then
+    trans_down=true
+    instr_ptr=1
+    instructions=false
+   end
+  end
+
+  -- instruction page navigation
+  if trans_y==0 then
+   if btnp(❎) then
+    trans_down=false
+   elseif btnp(🅾️) or btnp(➡️) then
+    instr_ptr+=1
+    if instr_ptr>4 then
+     trans_down=false
+    end
+   elseif btnp(⬅️) then
+    instr_ptr=max(1,instr_ptr-1)
+   end
+  end
  else
- 	if btnp(🅾️) then
- 		if title_ptr==0 then
- 		 level=1
- 			init_level(level)
- 			_upd=update_main
- 			_drw=draw_main
- 			sfx(0)
- 		elseif title_ptr==1 then
- 			_upd=update_lvlselect
- 			_drw=draw_lvlselect
- 			sfx(2)
- 		else
- 			instructions=true
- 		end
- 	end
- 
- 	if btnp(⬆️) then
- 		title_ptr=(title_ptr-1)%3
- 		sfx(3)
- 	elseif btnp(⬇️) then
- 		title_ptr=(title_ptr+1)%3
- 		sfx(3)
- 	end
+  if btnp(🅾️) then
+   if title_ptr==0 then
+    level=1
+    init_level(level)
+    _upd=update_main
+    _drw=draw_main
+    sfx(0)
+   elseif title_ptr==1 then
+    _upd=update_lvlselect
+    _drw=draw_lvlselect
+    sfx(2)
+   else
+    instructions=true
+   end
+  end
+
+  if btnp(⬆️) then
+   title_ptr=(title_ptr-1)%3
+   sfx(3)
+  elseif btnp(⬇️) then
+   title_ptr=(title_ptr+1)%3
+   sfx(3)
+  end
  end
-	
-	for s in all(snowflakes) do
-		s:update()
-		if s.y > screen then
-			del(snowflakes,s)
-			local new_x=flr(rnd(screen))
-			add(snowflakes,new_snowflake(new_x,0))
-		end
-	end
+
+ for s in all(snowflakes) do
+  s:update()
+  if s.y > screen then
+   del(snowflakes,s)
+   local new_x=flr(rnd(screen))
+   add(snowflakes,new_snowflake(new_x,0))
+  end
+ end
 end
 
 function draw_title()
-	cls(6)
+ cls(6)
 
-	for s in all(snowflakes) do
-		s:draw()
-	end
+ for s in all(snowflakes) do
+  s:draw()
+ end
 
-	spr(32,20,20,11,3)
-	printb("by aquova",70,42,7,0)
-	printb("start game",25,screen/2,7,0)
-	printb("level select",25,screen/2+10,7,0)
+ spr(32,20,20,11,3)
+ printb("by aquova",70,42,7,0)
+ printb("start game",25,screen/2,7,0)
+ printb("level select",25,screen/2+10,7,0)
  printb("instructions",25,screen/2+20,7,0)
-	printb("🅾️",14,screen/2+10*title_ptr,12,0)
-	circfill(screen/2,3*screen,2.25*screen,7)
-	spr(17,90,90,2,1)
-	spr(16,105,92)
-	
-	for i,hs in pairs(high_scores) do
-		if hs==get_max_score(i) then
-			spr(21,i*6-3,110+cos(i/2))
-		end
-	end
+ printb("🅾️",14,screen/2+10*title_ptr,12,0)
+ circfill(screen/2,3*screen,2.25*screen,7)
+ spr(17,90,90,2,1)
+ spr(16,105,92)
 
-	if instructions then
-		draw_instructions(0,trans_y)
-	end
+ for i,hs in pairs(high_scores) do
+  if hs==get_max_score(i) then
+   spr(21,i*6-3,110+cos(i/2))
+  end
+ end
+
+ if instructions then
+  draw_instructions(0,trans_y)
+ end
 end
 
 function update_lvlselect()
-	local max_lvl=max_level()
+ local max_lvl=max_level()
 
-	if btnp(🅾️) then
-	 if lvl_ptr < max_lvl then
-	 	level=lvl_ptr+1
-	 	init_level(level)
-			_upd=update_main
-			_drw=draw_main
-			sfx(0)
-		end
-	elseif btnp(❎) then
-		_upd=update_title
-		_drw=draw_title
-		sfx(2)
-	elseif btnp(⬅️) then
-		lvl_ptr=max(0,lvl_ptr-1)
-		sfx(3)
-	elseif btnp(➡️) then
-		lvl_ptr=min(lvl_ptr+1,max_unlocked-1)
-		sfx(3)
-	elseif btnp(⬆️) then
-		lvl_ptr=(lvl_ptr-row_num<0) and lvl_ptr or (lvl_ptr-row_num)
-		sfx(3)
-	elseif btnp(⬇️) then
-		lvl_ptr=(lvl_ptr+row_num>=max_unlocked) and lvl_ptr or (lvl_ptr+row_num)
-		sfx(3)
-	end
-	
-	for s in all(snowflakes) do
-		s:update()
-		if s.y > screen then
-			del(snowflakes,s)
-			local new_x=flr(rnd(screen))
-			add(snowflakes,new_snowflake(new_x,0))
-		end
-	end
+ -- if level is chosen, update variables
+ if btnp(🅾️) then
+  if lvl_ptr < max_lvl then
+   level=lvl_ptr+1
+   trans_y=-100
+   trans_down=true
+   transition=false
+   level_snow=0
+   init_level(level)
+   _upd=update_main
+   _drw=draw_main
+   sfx(0)
+  end
+ elseif btnp(❎) then
+  _upd=update_title
+  _drw=draw_title
+  sfx(2)
+ elseif btnp(⬅️) then
+  lvl_ptr=max(0,lvl_ptr-1)
+  sfx(3)
+ elseif btnp(➡️) then
+  lvl_ptr=min(lvl_ptr+1,max_unlocked-1)
+  sfx(3)
+ elseif btnp(⬆️) then
+  lvl_ptr=(lvl_ptr-row_num<0) and lvl_ptr or (lvl_ptr-row_num)
+  sfx(3)
+ elseif btnp(⬇️) then
+  lvl_ptr=(lvl_ptr+row_num>=max_unlocked) and lvl_ptr or (lvl_ptr+row_num)
+  sfx(3)
+ end
+
+ for s in all(snowflakes) do
+  s:update()
+  if s.y > screen then
+   del(snowflakes,s)
+   local new_x=flr(rnd(screen))
+   add(snowflakes,new_snowflake(new_x,0))
+  end
+ end
 end
 
 function draw_lvlselect()
-	cls(6)
-	
-	for s in all(snowflakes) do
-		s:draw()
-	end
-	
-	printbc("level select",10,7,0)
-	for lvl=0,max_level()-1 do
-		local x=lvl_margin.x+box_size*(lvl%row_num)
-		local y=lvl_margin.y+box_size*flr(lvl/row_num)
-		rectfill(x,y,x+box_size-1,y+box_size-1,6)
+ cls(6)
 
-		if lvl+1 > max_unlocked then
-			fillp(0xa5a5.8)
-			rectfill(x,y,x+box_size-1,y+box_size-1,5)
-   fillp()			
-		else
-			local high=high_scores[lvl+1]
-			local lvl_max=get_max_score(lvl+1)
-			local pen_color=(high==lvl_max) and 9 or 8
-			printb(high,x+ctext(""..high,x,x+box_size),y+3,pen_color,0)
-			line(x+3,y+10,x+box_size-4,y+10,0)
-			printb(lvl_max,x+ctext(""..lvl_max,x,x+box_size),y+14,pen_color,0)
-		end
+ for s in all(snowflakes) do
+  s:draw()
+ end
 
-		rect(x,y,x+box_size-1,y+box_size-1,0)
-	end
+ printbc("level select",10,7,0)
+ for lvl=0,max_level()-1 do
+  local x=lvl_margin.x+box_size*(lvl%row_num)
+  local y=lvl_margin.y+box_size*flr(lvl/row_num)
+  rectfill(x,y,x+box_size-1,y+box_size-1,6)
 
-	local ptr_x=lvl_margin.x+box_size*(lvl_ptr%row_num)
-	local ptr_y=lvl_margin.y+box_size*flr(lvl_ptr/row_num)
-	rect(ptr_x,ptr_y,ptr_x+box_size-1,ptr_y+box_size-1,11)
+  if lvl+1 > max_unlocked then
+   fillp(0xa5a5.8)
+   rectfill(x,y,x+box_size-1,y+box_size-1,5)
+   fillp()
+  else
+   local high=high_scores[lvl+1]
+   local lvl_max=get_max_score(lvl+1)
+   local pen_color=(high==lvl_max) and 9 or 8
+   printb(high,x+ctext(""..high,x,x+box_size),y+3,pen_color,0)
+   line(x+3,y+10,x+box_size-4,y+10,0)
+   printb(lvl_max,x+ctext(""..lvl_max,x,x+box_size),y+14,pen_color,0)
+  end
 
-	local back_txt="🅾️ select ❎ back"
-	printb(back_txt,ctext(back_txt,0,screen)-2,screen-10,7,0)
-	printb("❎",72,screen-10,8,0)
-	printb("🅾️",32,screen-10,12,0)
+  rect(x,y,x+box_size-1,y+box_size-1,0)
+ end
+
+ local ptr_x=lvl_margin.x+box_size*(lvl_ptr%row_num)
+ local ptr_y=lvl_margin.y+box_size*flr(lvl_ptr/row_num)
+ rect(ptr_x,ptr_y,ptr_x+box_size-1,ptr_y+box_size-1,11)
+
+ local back_txt="🅾️ select ❎ back"
+ printb(back_txt,ctext(back_txt,0,screen)-2,screen-10,7,0)
+ printb("❎",72,screen-10,8,0)
+ printb("🅾️",32,screen-10,12,0)
 end
 
 function create_snow()
-	snowflakes={}
-	for _=1,50 do
-	 local x=flr(rnd(screen))
-	 local y=flr(rnd(screen))
-		add(snowflakes,new_snowflake(x,y))
-	end
+ snowflakes={}
+ for _=1,50 do
+  local x=flr(rnd(screen))
+  local y=flr(rnd(screen))
+  add(snowflakes,new_snowflake(x,y))
+ end
 end
 -->8
 -- main game
 
 function update_main()
-	if transition then
-	 if trans_down then
-			trans_y=min(0,trans_y+5)
-		else
-			trans_y=max(-100,trans_y-5)
-			if trans_y==-100 then
-				transition=false
-				trans_down=true
-				level_snow=0
-			end
-  end		
-		
-		if trans_y==0 then	
-			if btnp(🅾️) then
-				if level==max_level() then
- 				_upd=update_title
- 				_drw=draw_title
- 				return
- 			end
- 			trans_down=false
- 			level+=1
- 			init_level(level)
- 		elseif btnp(❎) then
- 		 trans_down=false
- 		 init_level(level)
- 		end
- 	end
-		return
-	end
-	
-	-- reset level if ❎ held
-	if btn(❎) then
-		reset_frames+=1
-		if reset_frames==reset_time then
-			reset_frames=0
-			init_level(level)
-		end
-		return
-	end
+ if transition then
+  if trans_down then
+   trans_y=min(0,trans_y+5)
+  else
+   trans_y=max(-100,trans_y-5)
+   if trans_y==-100 then
+    transition=false
+    trans_down=true
+    level_snow=0
+   end
+  end
 
-	reset_frames=0
+  if trans_y==0 then
+   if btnp(🅾️) then
+    if level==max_level() then
+     _upd=update_title
+     _drw=draw_title
+     return
+    end
+    trans_down=false
+    level+=1
+    init_level(level)
+   elseif btnp(❎) then
+    trans_down=false
+    init_level(level)
+   end
+  end
+  return
+ end
+
+ -- reset level if ❎ held
+ if btn(❎) then
+  reset_frames+=1
+  if reset_frames==reset_time then
+   reset_frames=0
+   init_level(level)
+  end
+  return
+ end
+
+ reset_frames=0
  local startx,starty=p1.x,p1.y
-	main_input()
-	update_board()
- 
-	if not remaining_moves() or game_over then
-		transition=true
-		high_scores[level]=max(high_scores[level],level_snow)
-		max_unlocked=max(max_unlocked,level+1)
-		save_game()
+ main_input()
+ update_board()
+
+ if not remaining_moves() or game_over then
+  transition=true
+  high_scores[level]=max(high_scores[level],level_snow)
+  max_unlocked=max(max_unlocked,level+1)
+  save_game()
  end
 end
 
 function main_input()
-	-- store initial position
-	local startx,starty=p1.x,p1.y
-	local valid_tiles={1,4,5}
-	
+ -- store initial position
+ local startx,starty=p1.x,p1.y
+ local valid_tiles={1,4,5}
+
  -- behavior on ice
  -- since cracked ice turns immediately broken, check 6 rather than 5
  if (board[p1.y][p1.x]==4 or board[p1.y][p1.x]==6) and p1.d~="n" then
- 	-- for each orientation,
- 	-- first check if on edge, if so make neutral and stop
- 	-- then check if going to run into invalid tile
- 	if p1.d=="u" then
+  -- for each orientation,
+  -- first check if on edge, if so make neutral and stop
+  -- then check if going to run into invalid tile
+  if p1.d=="u" then
    if p1.y==1 then
-   	p1.d="n"
+    p1.d="n"
    elseif board[p1.y-1][p1.x]==2 or board[p1.y-1][p1.x]==6 then
-				p1.y-=1
-				game_over=true
+    p1.y-=1
+    game_over=true
    elseif board[p1.y-1][p1.x]==3 then
-				p1.d="n"
-			else
-				p1.y-=1
-			end
+    p1.d="n"
+   else
+    p1.y-=1
+   end
   elseif p1.d=="d" then
    if p1.y==#board then
-   	p1.d="n"
+    p1.d="n"
    elseif board[p1.y+1][p1.x]==2 or board[p1.y+1][p1.x]==6 then
-				p1.y+=1
-				game_over=true
+    p1.y+=1
+    game_over=true
    elseif board[p1.y+1][p1.x]==3 then
-				p1.d="n"
-			else
-				p1.y+=1
-			end
+    p1.d="n"
+   else
+    p1.y+=1
+   end
   elseif p1.d=="l" then
    if p1.x==1 then
-   	p1.d="n"
+    p1.d="n"
    elseif board[p1.y][p1.x-1]==2 or board[p1.y][p1.x-1]==6 then
-				p1.x-=1
-				game_over=true
+    p1.x-=1
+    game_over=true
    elseif board[p1.y][p1.x-1]==3 then
-				p1.d="n"
-			else
-				p1.x-=1
-			end
+    p1.d="n"
+   else
+    p1.x-=1
+   end
   elseif p1.d=="r" then
    if p1.x==#board[1] then
-   	p1.d="n"
+    p1.d="n"
    elseif board[p1.y][p1.x+1]==2 or board[p1.y][p1.x+1]==6 then
-				p1.x+=1
-				game_over=true
+    p1.x+=1
+    game_over=true
    elseif board[p1.y][p1.x+1]==3 then
-				p1.d="n"
-			else
-				p1.x+=1
-			end
+    p1.d="n"
+   else
+    p1.x+=1
+   end
   end
- 	return
+  return
  end
 
-	if btnp(⬅️) then
-		p1.x=max(1,p1.x-1)
-		p1.d="l"
-	elseif btnp(➡️) then
-		p1.x=min(p1.x+1,#board[1])
-		p1.d="r"
-	elseif btnp(⬆️) then
-		p1.y=max(1,p1.y-1)
-		p1.d="u"
-	elseif btnp(⬇️) then
-		p1.y=min(p1.y+1,#board)
-		p1.d="d"
-	end
+ if btnp(⬅️) then
+  p1.x=max(1,p1.x-1)
+  p1.d="l"
+ elseif btnp(➡️) then
+  p1.x=min(p1.x+1,#board[1])
+  p1.d="r"
+ elseif btnp(⬆️) then
+  p1.y=max(1,p1.y-1)
+  p1.d="u"
+ elseif btnp(⬇️) then
+  p1.y=min(p1.y+1,#board)
+  p1.d="d"
+ end
 
-	-- if move would move off snow, don't move
-	if not contains(valid_tiles,board[p1.y][p1.x]) then
-		p1.x,p1.y=startx,starty
-	end
+ -- if move would move off snow, don't move
+ if not contains(valid_tiles,board[p1.y][p1.x]) then
+  p1.x,p1.y=startx,starty
+ end
 end
 
 function update_board()
-	if board[p1.y][p1.x]==1 then
-		board[p1.y][p1.x]=2
-		level_snow+=1
-		sfx(1)
-	elseif board[p1.y][p1.x]==5 then
-		board[p1.y][p1.x]=6
-		sfx(4)
-	end
+ if board[p1.y][p1.x]==1 then
+  board[p1.y][p1.x]=2
+  level_snow+=1
+  sfx(1)
+ elseif board[p1.y][p1.x]==5 then
+  board[p1.y][p1.x]=6
+  sfx(4)
+ end
 end
 
 function remaining_moves()
-	-- todo: don't need to bother with bfs when all four directions are ice-grass
-	-- isn't considering that a false
-	
-	-- implement breadth-first search
+ -- implement breadth-first search
  local q={} -- queue
  local v={} -- visited
  add(q,{p1.x,p1.y})
  add(v,{p1.x,p1.y})
- 
+
  while #q~=0 do
- 	local val=pop(q)
- 	
- 	local neighbors=calc_neighbors(val)
- 	for n in all(neighbors) do
- 		if not contains(v,n) then
-				if board[n[2]][n[1]]==1 then
-				 return true
-				end
-				-- only add ice to queue
-				if (board[n[2]][n[1]]==4 or board[n[2]][n[1]]==5) then
-					add(q,n)
-				end
-				add(v,n)
-			end
- 	end
+  local val=pop(q)
+
+  local neighbors=calc_neighbors(val)
+  for n in all(neighbors) do
+   if not contains(v,n) then
+    if board[n[2]][n[1]]==1 then
+     return true
+    end
+    -- only add ice to queue
+    if (board[n[2]][n[1]]==4 or board[n[2]][n[1]]==5) then
+     add(q,n)
+    end
+    add(v,n)
+   end
+  end
  end
  return false
 end
@@ -431,392 +442,392 @@ end
 -- 5 - cracked ice
 -- 6 - broken ice
 _levels={
-	{
-		{1,1,1,1,1},
-		{1,1,1,1,1},
-		{1,1,2,1,1},
-		{1,1,1,1,1},
-		{1,1,1,1,1}
-	},
-	{
-		{3,1,1,1,1,1,1,3},
-		{1,1,1,1,1,1,1,1},
-		{1,1,1,2,1,1,1,1},
-		{1,1,1,1,1,1,1,1},
-		{1,1,1,1,1,1,1,1},
-		{3,1,1,1,1,1,1,3},
-	},
-	{
-		{2,1,1,1,1},
-		{1,1,1,1,1},
-		{1,1,3,1,1},
-		{1,1,3,1,1},
-		{1,1,3,1,1},
-		{1,1,1,1,1},
-		{1,1,1,1,1},
-	},
-		{
-		{2,1,1,1,1},
-		{1,3,1,1,1},
-		{1,1,1,1,1},
-		{1,1,1,1,1},
-		{1,1,1,1,1}
-	},
-	{
-		{3,3,1,1,1,3,3},
-		{3,1,1,3,1,1,3},
-		{1,1,1,1,1,1,1},
-		{1,3,1,2,1,3,1},
-		{1,1,1,1,1,1,1},
-		{3,1,1,3,1,1,3},
-		{3,3,1,1,1,3,3},
-	},
-	{
-		{1,1,3,3,3,3,3},
-		{1,2,1,4,4,4,1},
-		{1,1,1,3,3,3,3}
-	},
-	{
-		{1,4,4,1,4,4,1},
-		{4,4,4,4,4,4,4},
-		{1,4,4,2,4,4,1},
-		{1,4,4,1,4,4,1},
-		{1,4,4,4,4,4,1},
-		{4,4,4,4,4,4,4},
-		{1,1,1,1,1,1,1}
-	},
-	{
-		{1,1,1,1,1},
-		{1,4,1,4,1},
-		{1,4,1,4,1},
-		{1,4,2,4,1},
-		{1,1,4,1,1},
-		{1,4,1,4,1},
-		{1,4,1,4,1},
-		{1,4,1,4,1},
-		{1,1,1,1,1}
-	},
-	{
-		{1,1,1,1,1,2},
-		{1,3,3,1,1,1},
-		{1,3,1,1,1,1},
-  {1,1,1,1,1,1},
-  {1,1,1,1,3,1},
-  {1,1,1,3,3,1},
-		{1,1,1,1,1,1}  		
-	},
-	{
-		{3,4,4,4,4},
-		{4,4,4,4,3},
-		{4,4,2,4,4},
-		{4,1,4,4,4},
-		{4,4,4,1,4},
-		{4,4,4,4,4},
-	},
-	{
-		{4,1,4,1,4,1,4},
-		{1,4,1,4,1,4,1},
-		{4,1,4,1,4,1,4},
-		{1,4,1,2,1,4,1},
-		{4,1,4,1,4,1,4},
-		{1,4,1,4,1,4,1},
-		{4,1,4,1,4,1,4}
-	},
-	{
-		{4,1,3,4,4,4,4,4,4},
-		{4,3,4,4,4,4,4,4,4},
-		{4,4,4,4,4,4,4,3,4},
-		{3,4,4,4,4,4,4,4,4},
-		{4,4,4,4,4,4,3,4,4},
-		{4,4,4,4,1,4,4,4,3},
-		{4,3,4,4,4,4,4,4,4},
-		{4,4,4,4,4,3,4,4,4},
-		{4,4,4,4,4,4,4,4,2}
-	},
-	{
-		{1,4,4,4,5,5,1},
-		{3,3,3,4,3,3,3},
-		{2,2,3,2,3,2,2}
-	},
-	{
-		{4,1,4,3,4,1,4},
-		{1,4,1,3,1,4,1},
-		{4,1,4,3,4,1,4},
-		{2,4,1,5,1,4,1},
-		{4,1,4,3,4,1,4},
-		{1,4,1,3,1,4,1},
-		{4,1,4,3,4,1,4}
-	},
-	{
-		{2,1,1,4,1,4,1,4,1},
-		{1,3,4,3,4,3,4,3,4},
-		{1,4,5,4,1,4,5,4,1},
-		{4,3,4,3,1,3,4,3,4},
-		{1,4,1,1,4,1,1,4,1},
-		{4,3,4,3,1,3,4,3,4},
-		{1,4,5,4,1,4,5,4,1},
-		{4,3,4,3,4,3,4,3,4},
-		{1,4,1,4,1,4,1,4,1},
-	},
-	{
-	 {4,4,4,2,4,4,4},
-	 {5,3,3,5,3,3,5},
-	 {5,3,3,5,3,3,5},
-	 {1,5,5,1,3,3,5},
-	 {5,3,3,1,5,5,1},
-	 {5,3,3,5,3,3,3},
-	 {1,5,5,1,3,3,3},
-	 {5,3,3,5,3,3,3},
-	 {1,5,5,1,3,3,3}
-	},
-	{
-		{5,5,5,5,5},
-		{5,1,5,1,5},
-		{5,1,5,1,5},
-		{5,5,5,5,5},
-		{1,5,5,5,1},
-		{5,1,2,1,5}
-	},
-	{
-		{1,1,1,5,1,1,1},
-		{1,1,1,3,1,1,1},
-		{1,1,1,3,1,1,1},
-		{5,3,1,2,1,3,5},
-		{1,1,1,1,1,1,1},
-		{1,1,1,3,1,1,1},
-		{1,1,1,5,1,1,1}
-	},
-	{
-		{1,1,1,1,1,1,1,1,1,1,1},
-		{1,1,5,1,3,3,3,3,1,1,1},
-		{1,1,3,1,3,1,1,1,3,5,1},
-		{5,3,1,1,3,1,1,1,1,1,1},
-		{5,3,1,1,1,1,1,3,3,3,5},
-		{5,3,1,1,1,4,1,1,1,3,5},
-		{5,3,3,3,1,1,1,1,1,3,5},
-		{1,1,1,1,1,1,3,1,1,3,5},
-		{1,5,3,1,1,1,3,1,3,1,1},
-		{1,1,1,3,3,3,3,1,5,1,1},
-		{1,1,1,1,1,1,1,1,1,1,1}
-	},
-	{
-		{5,5,5,5,1,1,5,5,5,5},
-		{5,3,5,5,1,1,5,5,3,5},
-		{5,5,1,1,4,4,1,1,5,5},
-		{5,5,1,1,4,4,1,1,5,5},
-		{1,1,4,4,2,1,4,4,1,1},
-		{1,1,4,4,1,1,4,4,1,1},
-		{5,5,1,1,4,4,1,1,5,5},
-		{5,5,1,1,4,4,1,1,5,5},
-		{5,3,5,5,1,1,5,5,3,5},
-		{5,5,5,5,1,1,5,5,5,5}		
-	}
+ { -- 1
+ {1,1,1,1,1},
+ {1,1,1,1,1},
+ {1,1,2,1,1},
+ {1,1,1,1,1},
+ {1,1,1,1,1}
+},
+{ -- 2
+{3,1,1,1,1,1,1,3},
+{1,1,1,1,1,1,1,1},
+{1,1,1,2,1,1,1,1},
+{1,1,1,1,1,1,1,1},
+{1,1,1,1,1,1,1,1},
+{3,1,1,1,1,1,1,3},
+ },
+ { -- 3
+ {2,1,1,1,1},
+ {1,1,1,1,1},
+ {1,1,3,1,1},
+ {1,1,3,1,1},
+ {1,1,3,1,1},
+ {1,1,1,1,1},
+ {1,1,1,1,1},
+},
+{ -- 4
+{2,1,1,1,1},
+{1,3,1,1,1},
+{1,1,1,1,1},
+{1,1,1,1,1},
+{1,1,1,1,1}
+ },
+ { -- 5
+ {3,3,1,1,1,3,3},
+ {3,1,1,3,1,1,3},
+ {1,1,1,1,1,1,1},
+ {1,3,1,2,1,3,1},
+ {1,1,1,1,1,1,1},
+ {3,1,1,3,1,1,3},
+ {3,3,1,1,1,3,3},
+},
+{ -- 6
+{1,1,3,3,3,3,3},
+{1,2,1,4,4,4,1},
+{1,1,1,3,3,3,3}
+ },
+ { -- 7
+ {1,4,4,1,4,4,1},
+ {4,4,4,4,4,4,4},
+ {1,4,4,2,4,4,1},
+ {1,4,4,1,4,4,1},
+ {1,4,4,4,4,4,1},
+ {4,4,4,4,4,4,4},
+ {1,1,1,1,1,1,1}
+},
+{ -- 8
+{1,1,1,1,1},
+{1,4,1,4,1},
+{1,4,1,4,1},
+{1,4,2,4,1},
+{1,1,4,1,1},
+{1,4,1,4,1},
+{1,4,1,4,1},
+{1,4,1,4,1},
+{1,1,1,1,1}
+ },
+ { -- 9
+ {1,1,1,1,1,2},
+ {1,3,3,1,1,1},
+ {1,3,1,1,1,1},
+ {1,1,1,1,1,1},
+ {1,1,1,1,3,1},
+ {1,1,1,3,3,1},
+ {1,1,1,1,1,1}
+},
+{ -- 10
+{3,4,4,4,4},
+{4,4,4,4,3},
+{4,4,2,4,4},
+{4,1,4,4,4},
+{4,4,4,1,4},
+{4,4,4,4,4},
+ },
+ { -- 11
+ {4,1,4,1,4,1,4},
+ {1,4,1,4,1,4,1},
+ {4,1,4,1,4,1,4},
+ {1,4,1,2,1,4,1},
+ {4,1,4,1,4,1,4},
+ {1,4,1,4,1,4,1},
+ {4,1,4,1,4,1,4}
+},
+{ -- 12
+{4,1,3,4,4,4,4,4,4},
+{4,3,4,4,4,4,4,4,4},
+{4,4,4,4,4,4,4,3,4},
+{3,4,4,4,4,4,4,4,4},
+{4,4,4,4,4,4,3,4,4},
+{4,4,4,4,1,4,4,4,3},
+{4,3,4,4,4,4,4,4,4},
+{4,4,4,4,4,3,4,4,4},
+{4,4,4,4,4,4,4,4,2}
+ },
+ { -- 13
+ {1,4,4,4,5,5,1},
+ {3,3,3,4,3,3,3},
+ {2,2,3,2,3,2,2}
+},
+{ -- 14
+{4,1,4,3,4,1,4},
+{1,4,1,3,1,4,1},
+{4,1,4,3,4,1,4},
+{2,4,1,5,1,4,1},
+{4,1,4,3,4,1,4},
+{1,4,1,3,1,4,1},
+{4,1,4,3,4,1,4}
+ },
+ { -- 15
+ {2,1,1,4,1,4,1,4,1},
+ {1,3,4,3,4,3,4,3,4},
+ {1,4,5,4,1,4,5,4,1},
+ {4,3,4,3,1,3,4,3,4},
+ {1,4,1,1,4,1,1,4,1},
+ {4,3,4,3,1,3,4,3,4},
+ {1,4,5,4,1,4,5,4,1},
+ {4,3,4,3,4,3,4,3,4},
+ {1,4,1,4,1,4,1,4,1},
+},
+{ -- 16
+{4,4,4,2,4,4,4},
+{5,3,3,5,3,3,5},
+{5,3,3,5,3,3,5},
+{1,5,5,1,3,3,5},
+{5,3,3,1,5,5,1},
+{5,3,3,5,3,3,3},
+{1,5,5,1,3,3,3},
+{5,3,3,5,3,3,3},
+{1,5,5,1,3,3,3}
+ },
+ { -- 17
+ {5,5,5,5,5},
+ {5,1,5,1,5},
+ {5,1,5,1,5},
+ {5,5,5,5,5},
+ {1,5,5,5,1},
+ {5,1,2,1,5}
+},
+{ -- 18
+{1,1,1,5,1,1,1},
+{1,1,1,3,1,1,1},
+{1,1,1,3,1,1,1},
+{5,3,1,2,1,3,5},
+{1,1,1,1,1,1,1},
+{1,1,1,3,1,1,1},
+{1,1,1,5,1,1,1}
+ },
+ { -- 19
+ {1,1,1,1,1,1,1,1,1,1,1},
+ {1,1,5,1,3,3,3,3,1,1,1},
+ {1,1,3,1,3,1,1,1,3,5,1},
+ {5,3,1,1,3,1,1,1,1,1,1},
+ {5,3,1,1,1,1,1,3,3,3,5},
+ {5,3,1,1,1,4,1,1,1,3,5},
+ {5,3,3,3,1,1,1,1,1,3,5},
+ {1,1,1,1,1,1,3,1,1,3,5},
+ {1,5,3,1,1,1,3,1,3,1,1},
+ {1,1,1,3,3,3,3,1,5,1,1},
+ {1,1,1,1,1,1,1,1,1,1,1}
+},
+{ -- 20
+{5,5,5,5,1,1,5,5,5,5},
+{5,3,5,5,1,1,5,5,3,5},
+{5,5,1,1,4,4,1,1,5,5},
+{5,5,1,1,4,4,1,1,5,5},
+{1,1,4,4,2,1,4,4,1,1},
+{1,1,4,4,1,1,4,4,1,1},
+{5,5,1,1,4,4,1,1,5,5},
+{5,5,1,1,4,4,1,1,5,5},
+{5,3,5,5,1,1,5,5,3,5},
+{5,5,5,5,1,1,5,5,5,5}
+ }
 }
 
 _meta_levels={
-	-- top score, start x, start y
-	{24,3,3},
-	{43,4,3},
-	{31,1,1},
-	{23,1,1},
-	{32,4,4},
-	{8,2,2},
-	{17,4,3},
-	{31,3,4},
-	{35,6,1},
-	{2,3,3},
-	{24,4,4},
-	{2,9,9},
-	{2,4,3},
-	{19,1,4},
-	{25,1,1},
-	{8,4,1},
-	{8,3,6},
-	{39,4,4},
-	{80,6,6},
-	{35,5,5}
+ -- top score, start x, start y
+ {24,3,3},
+ {43,4,3},
+ {31,1,1},
+ {23,1,1},
+ {32,4,4},
+ {8,2,2},
+ {17,4,3},
+ {31,3,4},
+ {35,6,1},
+ {2,3,3},
+ {24,4,4},
+ {2,9,9},
+ {2,4,3},
+ {19,1,4},
+ {25,1,1},
+ {8,4,1},
+ {8,3,6},
+ {39,4,4},
+ {80,6,6},
+ {35,5,5}
 }
 
 function get_level(val)
-	return _levels[val]
+ return _levels[val]
 end
 
 function get_max_score(val)
-	return _meta_levels[val][1]
+ return _meta_levels[val][1]
 end
 
 function max_level()
-	return #_levels
+ return #_levels
 end
 
 function init_level(val)
-	if val==level then
-		restarting=true
-	else
-		restarting=false
-	end
-	game_over=false
-	board=copy_lvl(get_level(val))
-	p1.x=_meta_levels[val][2]
-	p1.y=_meta_levels[val][3]
-	p1.d="n" -- neutral direction
-	calc_margin(val)
+ if val==level then
+  restarting=true
+ else
+  restarting=false
+ end
+ game_over=false
+ board=copy_lvl(get_level(val))
+ p1.x=_meta_levels[val][2]
+ p1.y=_meta_levels[val][3]
+ p1.d="n" -- neutral direction
+ calc_margin(val)
 end
 
 function calc_margin(val)
-	local current_board=get_level(val)
-	margin.x=8*ceil((screen/8-#current_board[1])/2-1)
-	margin.y=8*ceil((screen/8-#current_board)/2-1)
+ local current_board=get_level(val)
+ margin.x=8*ceil((screen/8-#current_board[1])/2-1)
+ margin.y=8*ceil((screen/8-#current_board)/2-1)
 end
 
 -- makes a deep copy of src into tar
 -- this is assuming a 2d array
 function copy_lvl(_src)
-	local _tar={}
-	for row=1,#_src do
-	 _tar[row]={}
-	 for col=1,#_src[row] do
-	 	_tar[row][col]=_src[row][col]
-	 end
-	end
-	return _tar
+ local _tar={}
+ for row=1,#_src do
+  _tar[row]={}
+  for col=1,#_src[row] do
+   _tar[row][col]=_src[row][col]
+  end
+ end
+ return _tar
 end
 -->8
 -- drawing
 
 function draw_main()
-	cls(7)
+ cls(7)
 
-	draw_border()
-	draw_board()
-	draw_bar()
-	printb("웃",margin.x+8*p1.x+1,margin.y+8*p1.y+1,12,0)
+ draw_border()
+ draw_board()
+ draw_bar()
+ printb("웃",margin.x+8*p1.x+1,margin.y+8*p1.y+1,12,0)
 
-	if transition then
-		draw_transition(0,trans_y)
-	end
+ if transition then
+  draw_transition(0,trans_y)
+ end
 
-	-- resetting level
-	if reset_frames > 5 then
-		printbc("hold ❎ to reset",screen/2-10,7,0)
+ -- resetting level
+ if reset_frames > 5 then
+  printbc("hold ❎ to reset",screen/2-10,7,0)
   printb("❎",54,screen/2-10,8,0)
-		rectfill(screen/5,screen/2,4*screen/5,screen/2+10,8)
-		local bar_width=(reset_frames/reset_time)*3*screen/5
-		rectfill(screen/5+1,screen/2+1,screen/5+bar_width+1,screen/2+9,9)
-	end
+  rectfill(screen/5,screen/2,4*screen/5,screen/2+10,8)
+  local bar_width=(reset_frames/reset_time)*3*screen/5
+  rectfill(screen/5+1,screen/2+1,screen/5+bar_width+1,screen/2+9,9)
+ end
 end
 
 function draw_board()
-	for y=1,#board do
-		for x=1,#board[y] do
-			spr(board[y][x],margin.x+8*x,margin.y+8*y)
-		end
-	end
+ for y=1,#board do
+  for x=1,#board[y] do
+   spr(board[y][x],margin.x+8*x,margin.y+8*y)
+  end
+ end
 end
 
 function draw_border()
-	for x=0,screen/8-1 do
-	 for y=0,screen/8-1 do
-	 	spr(16,8*x,8*y)
-	 end
-	end
+ for x=0,screen/8-1 do
+  for y=0,screen/8-1 do
+   spr(16,8*x,8*y)
+  end
+ end
 end
 
 function draw_bar()
-	rectfill(0,0,screen,8,5)
-	print("level: "..level,2,2,6)
-	local size=trans_down and level_snow or 0
-	printr("size: "..size,2,6)
+ rectfill(0,0,screen,8,5)
+ print("level: "..level,2,2,6)
+ local size=trans_down and level_snow or 0
+ printr("size: "..size,2,6)
 end
 
 function draw_transition(_x,_y)
-  local lvl=0
-  if trans_down or restarting then
-  	lvl=level
-  else
-   lvl=level-1
-  end
+ local lvl=0
+ if trans_down or restarting then
+  lvl=level
+ else
+  lvl=level-1
+ end
 
-		local lvl_max=get_max_score(lvl)
-		rectfill(_x+15,_y+15,_x+screen-15,_y+screen-15,1)
-		rectfill(_x+20,_y+20,_x+screen-20,_y+screen-20,6)
-		printbc("level: "..lvl,_y+24,8,0)
-		line(_x+25,_y+32,_x+screen-25,_y+32,0)
-		printbc("snowman size: "..level_snow,_y+40,7,0)
-		printbc("possible max: "..lvl_max,_y+50,7,0)
-		if level_snow==lvl_max then
-		 sspr(24,16,13,19,_x+screen/2-6,_y+60)
-			printbc("perfect score!",_y+82,9,0)
-		else
-			printbc("no more moves!",_y+82,8,0)
-		end
+ local lvl_max=get_max_score(lvl)
+ rectfill(_x+15,_y+15,_x+screen-15,_y+screen-15,1)
+ rectfill(_x+20,_y+20,_x+screen-20,_y+screen-20,6)
+ printbc("level: "..lvl,_y+24,8,0)
+ line(_x+25,_y+32,_x+screen-25,_y+32,0)
+ printbc("snowman size: "..level_snow,_y+40,7,0)
+ printbc("possible max: "..lvl_max,_y+50,7,0)
+ if level_snow==lvl_max then
+  sspr(24,16,13,19,_x+screen/2-6,_y+60)
+  printbc("perfect score!",_y+82,9,0)
+ else
+  printbc("no more moves!",_y+82,8,0)
+ end
 
-		printbc("🅾️ next level",_y+screen-36,7)
-		printb("🅾️",_x+40,_y+screen-36,12,0)
-		printbc("❎ restart",_y+screen-28,7)
-		printb("❎",_x+46,_y+screen-28,8,0)
+ printbc("🅾️ next level",_y+screen-36,7)
+ printb("🅾️",_x+40,_y+screen-36,12,0)
+ printbc("❎ restart",_y+screen-28,7)
+ printb("❎",_x+46,_y+screen-28,8,0)
 end
 
 function new_snowflake(_x,_y)
-	local s={x=_x,y=_y,ang=rnd(1),spd=rnd(0.5)+0.5}
-	
-	s.update=function(this)
-		s.y+=s.spd
-		s.ang+=0.05
-	end
-	
-	s.draw=function(this)
-		circfill(s.x+sin(s.ang),s.y,1,7)
-	end
-	
-	return s
+ local s={x=_x,y=_y,ang=rnd(1),spd=rnd(0.5)+0.5}
+
+ s.update=function(this)
+  s.y+=s.spd
+  s.ang+=0.05
+ end
+
+ s.draw=function(this)
+  circfill(s.x+sin(s.ang),s.y,1,7)
+ end
+
+ return s
 end
 
 function draw_instructions(_x,_y)
-	rectfill(_x+15,_y+15,_x+screen-15,_y+screen-15,1)
-	rectfill(_x+20,_y+20,_x+screen-20,_y+screen-20,6)
-	printbc("instructions",_y+24,8,0)
-	line(_x+25,_y+32,_x+screen-25,_y+32,0)
+ rectfill(_x+15,_y+15,_x+screen-15,_y+screen-15,1)
+ rectfill(_x+20,_y+20,_x+screen-20,_y+screen-20,6)
+ printbc("instructions",_y+24,8,0)
+ line(_x+25,_y+32,_x+screen-25,_y+32,0)
 
-	if instr_ptr==1 then
-		printbc("try to build the",_y+36,7,0)
-		printbc("biggest snowman!",_y+42,7,0)
-		printbc("collect snow while",_y+54,7,0)
-		printbc("avoiding grass.",_y+60,7,0)
+ if instr_ptr==1 then
+  printbc("try to build the",_y+36,7,0)
+  printbc("biggest snowman!",_y+42,7,0)
+  printbc("collect snow while",_y+54,7,0)
+  printbc("avoiding grass.",_y+60,7,0)
 
-		spr(1,_x+40,_y+76)
-		spr(20,_x+40,_y+76)
-		spr(2,_x+screen-48,_y+76)
-		spr(19,_x+screen-48,_y+76)
-	elseif instr_ptr==2 then
-	 printbc("watch out for",_y+40,7,0)
-		printbc("rocks, they won't",_y+46,7,0)
-		printbc("let you pass.",_y+52,7,0)		
-		
-		spr(3,_x+60,_y+76)	
-	elseif instr_ptr==3 then
-		printbc("you will slide",_y+40,7,0)
-		printbc("across ice!",_y+46,7,0)
-		printbc("some ice is",_y+56,7,0)		
-		printbc("cracked. watch out!",_y+62,7,0)
-		
-		spr(4,_x+40,_y+76)
-		spr(5,_x+60,_y+76)
-		spr(6,_x+screen-48,_y+76)
-	else
-		printbc("try to beat",_y+40,7,0)
-		printbc("every level.",_y+46,7,0)
-		printbc("have fun!",_y+56,7,0)
+  spr(1,_x+40,_y+76)
+  spr(20,_x+40,_y+76)
+  spr(2,_x+screen-48,_y+76)
+  spr(19,_x+screen-48,_y+76)
+ elseif instr_ptr==2 then
+  printbc("watch out for",_y+40,7,0)
+  printbc("rocks, they won't",_y+46,7,0)
+  printbc("let you pass.",_y+52,7,0)
 
-	 sspr(24,16,13,19,_x+screen/2-6,_y+70)
-	end
-	
-	printb("➡️",_x+screen-30,_y+screen-30,7,0)
+  spr(3,_x+60,_y+76)
+ elseif instr_ptr==3 then
+  printbc("you will slide",_y+40,7,0)
+  printbc("across ice!",_y+46,7,0)
+  printbc("some ice is",_y+56,7,0)
+  printbc("cracked. watch out!",_y+62,7,0)
 
-	-- if there are previous pages, show left arrow
-	if instr_ptr>1 then
-		printb("⬅️",_x+24,_y+screen-30,7,0)
-	end
+  spr(4,_x+40,_y+76)
+  spr(5,_x+60,_y+76)
+  spr(6,_x+screen-48,_y+76)
+ else
+  printbc("try to beat",_y+40,7,0)
+  printbc("every level.",_y+46,7,0)
+  printbc("have fun!",_y+56,7,0)
+
+  sspr(24,16,13,19,_x+screen/2-6,_y+70)
+ end
+
+ printb("➡️",_x+screen-30,_y+screen-30,7,0)
+
+ -- if there are previous pages, show left arrow
+ if instr_ptr>1 then
+  printb("⬅️",_x+24,_y+screen-30,7,0)
+ end
 end
 
 -->8
@@ -824,116 +835,116 @@ end
 
 -- calcs x for centering text between two values
 function ctext(_t,_x1,_x2)
-	return ((_x2-_x1)/2)-#_t*2
+ return ((_x2-_x1)/2)-#_t*2
 end
 
 -- prints text to center of screen
 function printc(_t,_y,_c)
-	print(_t,ctext(_t,0,screen),_y,_c)
+ print(_t,ctext(_t,0,screen),_y,_c)
 end
 
 -- prints right aligned text
 function printr(_t,_y,_c)
-	local _x=screen-#_t*4-1
-	print(_t,_x,_y,_c)
+ local _x=screen-#_t*4-1
+ print(_t,_x,_y,_c)
 end
 
 -- prints text with a border
 function printb(_t,_x,_y,_cinner,_couter)
-	for i=-1,1 do
-		for j=-1,1 do
-			print(_t,_x+i,_y+j,_couter)
-		end
-	end
+ for i=-1,1 do
+  for j=-1,1 do
+   print(_t,_x+i,_y+j,_couter)
+  end
+ end
 
-	print(_t,_x,_y,_cinner)
+ print(_t,_x,_y,_cinner)
 end
 
 -- print both with a border and centered
 function printbc(_t,_y,_cinner,_couter)
-	local x=ctext(_t,0,screen)
-	printb(_t,x,_y,_cinner,_couter)
+ local x=ctext(_t,0,screen)
+ printb(_t,x,_y,_cinner,_couter)
 end
 
 -- checks if a table contains an element
 function contains(_tbl,_e)
-	for item in all(_tbl) do
-		if type(item)=="table" then
-			local all_matches=true
-			for i=1,#item do
-				if _e[i]~=item[i] then
-					all_matches=false
-					break
-				end
-			end
-			if all_matches then return true end
-		else
-			if item==_e then
-				return true
-			end
-		end
-	end
-	return false
+ for item in all(_tbl) do
+  if type(item)=="table" then
+   local all_matches=true
+   for i=1,#item do
+    if _e[i]~=item[i] then
+     all_matches=false
+     break
+    end
+   end
+   if all_matches then return true end
+  else
+   if item==_e then
+    return true
+   end
+  end
+ end
+ return false
 end
 
 -- pop element off queue-like table
 function pop(_tbl)
-	local val=_tbl[1]
-	del(_tbl,val)
-	return val
+ local val=_tbl[1]
+ del(_tbl,val)
+ return val
 end
 
 -- assuming _p is a table of {x,y}
 function calc_neighbors(_p)
-	local n={}
-	
-	-- what a 'meh' way to do this
-	local dirs={{0,1},{0,-1},{-1,0},{1,0}}
-	for i in all(dirs) do
-		local x=mid(1,_p[1]+i[1],#board[1])
-		local y=mid(1,_p[2]+i[2],#board)
-		
-		-- don't add original point to neighbor list
-		if (x~=_p[1]) or (y~=_p[2]) then
-			add(n,{x,y})
-		end
-	end	
-	
-	return n
+ local n={}
+
+ -- what a 'meh' way to do this
+ local dirs={{0,1},{0,-1},{-1,0},{1,0}}
+ for i in all(dirs) do
+  local x=mid(1,_p[1]+i[1],#board[1])
+  local y=mid(1,_p[2]+i[2],#board)
+
+  -- don't add original point to neighbor list
+  if (x~=_p[1]) or (y~=_p[2]) then
+   add(n,{x,y})
+  end
+ end
+
+ return n
 end
 -->8
 -- saving local data
 
 function save_game()
-	-- save data format
-	-- 0 - number of unlocked levels (default to 1)
+ -- save data format
+ -- 0 - number of unlocked levels (default to 1)
  -- 1-#levels - player score of respective level
  dset(0,max_unlocked)
  for i,v in pairs(high_scores) do
- 	dset(i,v)
+  dset(i,v)
  end
 end
 
 function load_data()
-	-- if unitialized
-	if dget(0)==0 then
-		reset_data()
-	else
-		max_unlocked=dget(0)
-		high_scores={}
-		for i=1,max_level() do
-			add(high_scores,dget(i))
-		end
-	end
+ -- if unitialized
+ if dget(0)==0 then
+  reset_data()
+ else
+  max_unlocked=dget(0)
+  high_scores={}
+  for i=1,max_level() do
+   add(high_scores,dget(i))
+  end
+ end
 end
 
 function reset_data()
-	dset(0,1)
-	high_scores={}
-	for i=1,20 do
-	 add(high_scores,0)
-		dset(i,0)
-	end
+ dset(0,1)
+ high_scores={}
+ for i=1,20 do
+  add(high_scores,0)
+  dset(i,0)
+ end
 end
 __gfx__
 0000000077777777bbb7bb3b77777777cccccccccccccccccccccccc000000000000000000000000000000000000000000000000000000000000000000000000
