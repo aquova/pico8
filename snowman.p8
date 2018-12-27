@@ -46,7 +46,7 @@ function _init()
  palt(0,false)
  palt(14,true)
 
- -- Generate title screen particles
+ -- generate title screen particles
  create_snow()
  _upd=update_title
  _drw=draw_title
@@ -176,6 +176,7 @@ function update_lvlselect()
    trans_y=-100
    trans_down=true
    transition=false
+   restarting=false
    level_snow=0
    init_level(level)
    _upd=update_main
@@ -190,13 +191,13 @@ function update_lvlselect()
   lvl_ptr=max(0,lvl_ptr-1)
   sfx(3)
  elseif btnp(➡️) then
-  lvl_ptr=min(lvl_ptr+1,max_unlocked-1)
+  lvl_ptr=min(min(lvl_ptr+1,max_unlocked-1),max_level()-1)
   sfx(3)
  elseif btnp(⬆️) then
   lvl_ptr=(lvl_ptr-row_num<0) and lvl_ptr or (lvl_ptr-row_num)
   sfx(3)
  elseif btnp(⬇️) then
-  lvl_ptr=(lvl_ptr+row_num>=max_unlocked) and lvl_ptr or (lvl_ptr+row_num)
+  lvl_ptr=(lvl_ptr+row_num>=max_unlocked) and lvl_ptr or min(lvl_ptr+row_num,max_level()-1)
   sfx(3)
  end
 
@@ -281,10 +282,12 @@ function update_main()
      return
     end
     trans_down=false
+    restarting=false
     level+=1
     init_level(level)
    elseif btnp(❎) then
     trans_down=false
+    restarting=true
     init_level(level)
    end
   end
@@ -296,6 +299,7 @@ function update_main()
   reset_frames+=1
   if reset_frames==reset_time then
    reset_frames=0
+   level_snow=0
    init_level(level)
   end
   return
@@ -661,11 +665,11 @@ function max_level()
 end
 
 function init_level(val)
- if val==level then
-  restarting=true
- else
-  restarting=false
- end
+ -- if val==level then
+ --  restarting=true
+ -- else
+ --  restarting=false
+ -- end
  game_over=false
  board=copy_lvl(get_level(val))
  p1.x=_meta_levels[val][2]
@@ -1122,4 +1126,4 @@ __sfx__
 000400000365403655000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000300002505025050220502205022000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000400001f15024150000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000200003f5003f500005030050300503005030050300503005030050300503005030050300503005030050300503005030050300503005030050300503005030050300503005030050300503005030050300503
+000200002d65023750176531f753266532a65330703197031c7031e703207032270324703297032b7032d70300703007030070300703007030070300703007030070300703007030070300703007030070300703
