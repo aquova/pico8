@@ -15,15 +15,15 @@ function _init()
 	turns={u={'r','l'},d={'l','r'},l={'u','d'},r={'d','u'}}
 
 	lives=2
-	level=0
+	level=1
 	score=0
 	maxflags=10
-	loadlevel()
 
 	dust={}
 	enemies={}
-	flags={}
 	scoretags={}
+	
+	loadlevel()
 
 	upd=update_title
 	drw=draw_title
@@ -40,6 +40,20 @@ end
 -- main game
 
 function update_main()
+	frames+=1
+	
+	if frames<30 then
+		return
+	elseif trans then
+		leveltransition()
+		return
+	elseif dead then
+		if frames>30 then
+			death()
+		end
+		return
+	end
+
 	local celx=round(p1.x/8)
 	local cely=round(p1.y/8)
 
@@ -66,6 +80,11 @@ function update_main()
 		 end
 		end
 	end
+	
+	if btn(❎) then
+		local newd=createdust()
+		add(dust,newd)
+	end
 
 	if checkwalls(p1.d) then
 		for d in all(turns[p1.d]) do
@@ -91,7 +110,8 @@ function update_main()
 
 	local m=mget(celx,cely)
 	if fget(m,1) then
-		death()
+		frames=0
+		dead=true
 	end
 	
 	for t in all(scoretags) do
@@ -100,23 +120,33 @@ function update_main()
 			del(scoretags,t)
 		end
 	end
-
-	cam.x=p1.x-(screen/2)+4
-	cam.y=p1.y-(screen/2)+4
-	camera(cam.x,cam.y)
- frames+=1
+	
+	for d in all(dust) do
+		d:update()
+		if d:die() then
+			del(dust,d)
+		end
+	end
 
  if frames%20==0 then
  	fuel-=1
- 	if fuel==0 then
+ 	if fuel<=0 then
  		death()
  	end
  end
+ 
+ cam.x=p1.x-(screen/2)+4
+	cam.y=p1.y-(screen/2)+4
+	camera(cam.x,cam.y)
 end
 
 function draw_main()
 	cls(11) -- outside of map should be green
 	map(0,0,0,0,mapwidth/8,mapheight/8)
+
+	for d in all(dust) do
+		d:draw()
+	end
 
 	for t in all(scoretags) do
 		t:draw()
@@ -176,14 +206,25 @@ end
 
 function death()
 	lives-=1
-	p1.x=p1.sx
-	p1.y=p1.sy
-	fuel=100
-	-- todo: reset enemy positions too
-
 	if lives==0 then
 		gameover()
 	end
+	
+	p1.x=p1.sx
+	p1.y=p1.sy
+	p1.d='u'
+	fuel=100
+	frames=0
+	dead=false
+	dust={}
+	flagval=0
+	x2=false
+	scoretags={}
+	cam.x=p1.x-(screen/2)+4
+	cam.y=p1.y-(screen/2)+4
+	camera(cam.x,cam.y)
+	-- todo: reset enemy positions too
+
 end
 
 function gameover()
@@ -195,11 +236,35 @@ function createdust()
 	d.x=round(p1.x/8)
 	d.y=round(p1.y/8)
 	d.age=0
+	
+	d.update=function(self)
+		self.age+=1
+	end
+	
+	d.die=function(self)
+		return (self.age>30)
+	end
+	
+	-- checks if {x,y} is in dust
+ d.checkdust=function(self)
+ 	for i in all(dust) do
+ 		if i.x==d.x and i.y==d.y then
+ 			return true
+ 		end
+ 	end
+ 	return false
+ end
 
 	d.draw=function(self)
-		spr(7,d.x,d.y)
+		spr(7,self.x*8,self.y*8)
+	end
+	
+	if d.checkdust() then
+		return nil
 	end
 
+	fuel-=3
+	sfx(3)
 	return d
 end
 
@@ -208,18 +273,23 @@ function checkflags()
 	local cely=round(p1.y/8)
 	local m=mget(celx,cely)
 	if m==3 or m==4 then
-	 if (m==4) x2=true
+	 if (m==4) then
+	 	x2=true
+	 	sfx(1)
+	 else
+	 	sfx(0)
+	 end
 		mset(celx,cely,33)
-		removeflag(celx,cely)
+		removeitem(celx,cely,flags)
 		local mult=x2 and 2 or 1
-		local val=(maxflags-#flags)*100
-		score+=val*mult
-		local newtag=newscore(celx*8,cely*8,val,x2)
+		flagval+=100
+		score+=flagval*mult
+		local newtag=newscore(celx*8,cely*8,flagval,x2)
 		add(scoretags,newtag)
 	end
 
 	if #flags==0 then
-		nextlevel()
+		trans=true
 	end
 end
 -->8
@@ -264,11 +334,11 @@ function printbc(t,y,cin,cout)
 	printb(t,x,y,cin,cout)
 end
 
--- removes flag by xy
-function removeflag(x,y)
-	for i in all(flags) do
+-- removes from table by xy
+function removeitem(x,y,tbl)
+	for i in all(tbl) do
 		if i[1]==x and i[2]==y then
-			del(flags,i)
+			del(tbl,i)
 		end
 	end
 end
@@ -281,14 +351,17 @@ function newenemy(x,y)
 	return e
 end
 -->8
--- level generation
+-- level functions
 
 function loadlevel()
 	frames=0
 	flags={}
 	scoretags={}
 	fuel=100
+	flagval=0
 	x2=false
+	trans=false
+	dead=false
 
 	-- resets map
 	reload()
@@ -312,6 +385,10 @@ function loadlevel()
 
 	placeflags()
 	placerocks()
+	
+	cam.x=p1.x-(screen/2)+4
+	cam.y=p1.y-(screen/2)+4
+	camera(cam.x,cam.y)
 end
 
 function placeflags()
@@ -359,6 +436,20 @@ function nextlevel()
 	level+=1
 	loadlevel()
 end
+
+function leveltransition()
+	-- convert fuel to points, move to next level
+	-- todo: add slight pause before and after fuel to points
+	if fuel~=0 then
+		fuel-=1
+		score+=10
+		if fuel%3==0 then
+			sfx(2)
+		end
+	else
+		nextlevel()
+	end
+end
 -->8
 -- drawing functions
 
@@ -381,9 +472,21 @@ end
 function drawfuel()
 	local barwidth=fuel/100*screen/3
 	local c=(fuel<20) and 8 or 10
-	rectfill(cam.x+screen/3-1,cam.y+screen-13,cam.x+2*screen/3+1,cam.y+screen-3,0)
-	rectfill(cam.x+screen/3,cam.y+screen-12,cam.x+screen/3+barwidth,cam.y+screen-4,c)
-	printc("fuel",screen-10,5)
+	rectfill(cam.x+screen/3,cam.y+screen-13,cam.x+2*screen/3,cam.y+screen-3,0)
+	rectfill(cam.x+screen/3-1,cam.y+screen-12,cam.x+2*screen/3+1,cam.y+screen-4,0)
+	if fuel>0 then
+ 	rectfill(cam.x+screen/3,cam.y+screen-11,cam.x+screen/3+barwidth,cam.y+screen-5,c)
+ 	if barwidth>1 then
+ 		rectfill(cam.x+screen/3+1,cam.y+screen-12,cam.x+screen/3+barwidth-1,cam.y+screen-4,c)
+ 	end
+ 	if barwidth>2 then
+ 		pset(cam.x+screen/3+2,cam.y+screen-10,7)
+ 	end
+ 	if barwidth>3 then
+ 		line(cam.x+screen/3+3,cam.y+screen-11,cam.x+screen/3+barwidth,cam.y+screen-11,7)
+ 	end
+ end
+	printc("fuel",screen-9,5)
 end
 
 function drawbar()
@@ -597,3 +700,8 @@ __map__
 2221212121212121212121161717171717171717171821212121212121212120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 2312212121261821101221212121212121212121212121211011111111122120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 3423122126372121202312212121211012212617272115213031141331322120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__sfx__
+0004000024050240501e0501e05024050240502e0502e050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0004000024050240501e0501e05024050240502e0502e0503a0503a05000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000400002305023050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00020000266501c65016650116500d6500c6500a6500865007650076500b600086000760007600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

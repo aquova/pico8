@@ -1,0 +1,449 @@
+﻿<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>PICO-8 Cartridge</title>
+        <meta name="description" content="">
+
+<STYLE TYPE="text/css">
+<!--
+
+canvas#canvas { width: 512px; height: 512px; }
+
+.pico8_el {
+	float:left;
+	width:92px;
+	display:inline-block;
+  	margin: 1px;
+	padding: 4px;
+	text-align: center;
+	color:#fff;
+	background-color:#777;
+	font-family : verdana;
+	font-size: 9pt;
+	cursor: pointer;
+	cursor: hand;
+}
+.pico8_el a{
+	text-decoration: none;
+	color:#fff;
+}
+
+.pico8_el:hover{
+	background-color:#aaa;
+}
+
+.pico8_el:link{
+	background-color:#aaa;
+}
+
+canvas{
+    image-rendering: optimizeSpeed;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: optimize-contrast;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
+    border: 0px
+}
+
+-->
+</STYLE>
+
+</head>
+
+<body bgcolor=#303030>
+
+	<br><br><br>
+
+	<center><div style="width:512px;">
+
+	<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+
+	<script type="text/javascript">
+		var canvas = document.getElementById("canvas");
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+
+		// show Emscripten environment where the canvas is
+		// arguments are passed to PICO-8
+
+		var Module = {};
+		Module.canvas = canvas;
+
+		/*
+			// When pico8_buttons is defined, PICO-8 takes each int to be a live bitfield
+			// representing the state of each player's buttons
+
+			var pico8_buttons = [0, 0, 0, 0, 0, 0, 0, 0]; // max 8 players
+			pico8_buttons[0] = 2 | 16; // example: player 0, RIGHT and Z held down
+
+			// when pico8_gpio is defined, reading and writing to gpio pins will
+			// read and write to these values
+			var pico8_gpio = new Array(128);
+		*/
+	</script>
+
+	<script async type="text/javascript" src="piconian.js"></script>
+
+	<script>
+		// key blocker. prevent cursor keys from scrolling page while playing cart.
+
+		function onKeyDown_blocker(event) {
+			event = event || window.event;
+			var o = document.activeElement;
+			if (!o || o == document.body || o.tagName == "canvas")
+			{
+				if ([32, 37, 38, 39, 40].indexOf(event.keyCode) > -1)
+				{
+					if (event.preventDefault) event.preventDefault();
+				}
+			}
+		}
+
+		document.addEventListener('keydown', onKeyDown_blocker, false);
+
+	</script>
+
+	<br>
+
+	<div class=pico8_el onclick="Module.pico8Reset();">
+
+	<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAaklEQVR4Ae2dOwoAMQhE15A+rfc/3bZ7AlMnQfywCkKsfcgMM9ZP+QHtIn0vLeBAFduiFdQ/0DmvtR5LXJ6CPSXe2ZXcFNlTxFbemKrbZPs35XogeS9xeQr+anT6LzoOwEDwZJ7jwhXUnwkTTiDQ2Ja34AAAABB0RVh0TG9kZVBORwAyMDExMDIyMeNZtsEAAAAASUVORK5CYII=" alt="Reset" width=12 height=	12/>
+
+	Reset</div>
+
+	<div class=pico8_el onclick="Module.pico8TogglePaused();">
+
+	<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAPUlEQVR4Ae3doQ0AIAxEUWABLPtPh2WCq26DwFSU/JPNT166QSu/Hg86W9dwLte+diP7AwAAAAAAgD+A+jM2ZAgo84I0PgAAABB0RVh0TG9kZVBORwAyMDExMDIyMeNZtsEAAAAASUVORK5CYII=" alt="Pause" width=12 height=12/>
+
+	Pause</div>
+	<div class=pico8_el onclick="Module.requestFullScreen(true, false);">
+
+	<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAaklEQVR4Ae2dsQ1AIQhExfze1v2ns3UCrfgFhmgUUAoGgHscp21wX9BqaZoDojbB96OkDJKNcTN2BHTyYNYmoT2BlPL7BKgcPfHjAVXKKadkHOn9K1r16N0czN6a95N8mnA7Aq2fTZ3Af3UKmCSMazL8HwAAABB0RVh0TG9kZVBORwAyMDExMDIyMeNZtsEAAAAASUVORK5CYII=" alt="Fullscreen" width=12 height=12/>
+
+	Fullscreen</div>
+	<div class=pico8_el onclick="Module.pico8ToggleSound();">
+	<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAXklEQVR4Ae2doQ4AIQxD4YLH8v9fh+ULhjpxxSwLg2uyapr1JRu1iV5Z+1BGl4+xNpX38SYo2uRvYiT5LwEmt+ocgXVLrhPEgBiw8Q5w7/kueSkK+D2tJO4E/I3GrwkqQCBabEj/4QAAABB0RVh0TG9kZVBORwAyMDExMDIyMeNZtsEAAAAASUVORK5CYII=" alt="Toggle Sound" width=12 height=12/>
+
+	Sound</div>
+	<div class=pico8_el ><a target="_new" href="http://www.lexaloffle.com/bbs/?cat=7&sub=2">
+	<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAlElEQVR4Ae2dMQ5FQBCGh6jcwAkkateg3DiAa+iQUGqVKi95FQfAJRQOoHeBUf8JyQqKjZ1uMzuz2e/LTE3KhyF7kSlgLOykas23f6D+A9Yp84aAOYU15pcJnfji0Il2ID8HzC4y38ZrnfIBGxeRoR3c3EWrACdsV5BOsx7OSRnrOXh4F5HzA6bevwUn8wlz7eCDsQM99B3ks0s/4QAAABB0RVh0TG9kZVBORwAyMDExMDIyMeNZtsEAAAAASUVORK5CYII=" alt="More Carts" width=12 height=12/>
+
+	Carts</a></div>
+
+	<br>
+
+	</div></center>
+	<br><br>
+
+</body></html>
+
+<!-- 8< -- ## FULLSCREEN FIX STARTS HERE ## -- -->
+<script type="text/javascript">
+
+	{
+		var breaks = canvas.parentNode.getElementsByTagName('BR');
+		for (var i = 0; i < breaks.length; i++)
+			canvas.parentNode.removeChild(breaks[i]);
+	}
+	canvas.parentNode.style.width="512";
+	screen = document.createElement("div");
+	canvas.parentNode.replaceChild(screen,canvas);
+	screen.appendChild(canvas);
+
+	screen.style.display = "flex";
+	screen.style.alignItems = "center";
+	canvas.style.margin = "auto";
+
+	function resizeCanvas()
+	{
+		var mult=128;
+		var csize=Math.floor(512/mult)*mult;
+		if (document.fullscreenElement || document.mozFullScreenElement || document.webkitIsFullScreen || document.msFullscreenElement)
+		{
+			csize=Math.max(mult,Math.min(Math.floor(window.innerWidth/mult)*mult,Math.floor(window.innerHeight/mult)*mult));
+		}
+		canvas.style.width = csize;
+		canvas.style.height = csize;
+		screen.parentNode.style.width=csize;
+		window.focus();
+	}
+
+	window.addEventListener('load', resizeCanvas, false);
+	window.addEventListener('resize', resizeCanvas, false);
+	window.addEventListener('orientationchange', resizeCanvas, false);
+	window.addEventListener('fullscreenchange', resizeCanvas, false);
+	window.addEventListener('webkitfullscreenchange', resizeCanvas, false);//for itch.app
+
+	function toggleFullscreen()
+	{
+		if (document.fullscreenElement || document.mozFullScreenElement || document.webkitIsFullScreen || document.msFullscreenElement)
+		{//exit fs
+			screen.cancelFullscreen = screen.cancelFullscreen || screen.mozCancelFullScreen || screen.webkitCancelFullScreen;
+			screen.cancelFullscreen();
+		}
+		else
+		{//enter fs
+			screen.requestFullscreen = screen.requestFullscreen || screen.mozRequestFullScreen || screen.webkitRequestFullScreen;
+			screen.requestFullscreen();
+		}
+	}
+
+	function setrfds()
+	{
+		if (Module.requestFullScreen)
+			Module.requestFullScreen = toggleFullscreen;
+		else
+			requestAnimationFrame(setrfds);
+	}
+	requestAnimationFrame(setrfds);
+</script>
+<!-- 8< -- ## FULLSCREEN FIX ENDS HERE ## -- -->
+
+<!-- 8< -- ## GL SHADER STUFF STARTS HERE ## -- -->
+
+<!-- vertex shader -->
+<script id="some-vertex-shader" type="x-shader/x-vertex">
+	attribute vec2 a_position;
+	attribute vec2 a_texCoord;
+	varying   vec2 v_texCoord;
+
+	void main()
+	{
+		gl_Position = vec4(a_position.x, a_position.y, 0, 1);
+
+		v_texCoord = a_texCoord;
+	}
+</script>
+
+<!-- fragment shader -->
+<script id="some-fragment-shader" type="x-shader/x-fragment">
+
+	precision mediump float;
+
+	varying vec2		v_texCoord;
+	uniform vec2		u_canvasSize;
+	uniform sampler2D	u_texture;
+
+	// PUBLIC DOMAIN CRT STYLED SCAN-LINE SHADER
+	//   by Timothy Lottes
+	// https://www.shadertoy.com/view/XsjSzR
+	//   modified (borked) by ultrabrite
+
+	// Emulated input resolution.
+	const vec2 texSize=vec2(256.0,128.0);
+
+	// Hardness of scanline.
+	//  -8.0 = soft
+	// -16.0 = medium
+	float hardScan=-8.0;
+
+	// Hardness of pixels in scanline.
+	// -2.0 = soft
+	// -4.0 = hard
+	const float hardPix=-2.0;
+
+	// Hardness of shadow mask in scanline.
+	// 0.5 = hard
+	// 3.0 = soft
+	const float hardMask=2.0;
+
+	const vec3 compos = vec3(1.0/6.0,1.0/2.0,5.0/6.0);
+
+	// Display warp.
+	// 0.0 = none
+	// 1.0/8.0 = extreme
+	const vec2 warp=vec2(1.0/24.0,1.0/24.0);
+
+	//------------------------------------------------------------------------
+
+	// Nearest emulated sample given floating point position and texel offset.
+	// Also zero's off screen.
+	vec3 Fetch(vec2 pos,vec2 off)
+	{
+		pos=floor(pos * texSize + off) / texSize;
+		if (pos.x<0.0 || pos.x>=1.0 || pos.y<0.0 || pos.y>=1.0)
+			return vec3(0.0,0.0,0.0);
+		return texture2D(u_texture,pos.xy).rgb;
+	}
+
+	// Distance in emulated pixels to nearest texel.
+	vec2 Dist(vec2 pos)
+	{
+		pos=pos * texSize;
+		return -((pos-floor(pos))-vec2(0.5));
+	}
+
+	// 1D Gaussian.
+	float Gaus(float pos,float scale)
+	{
+		return exp2(scale*pos*pos);
+	}
+
+	// 3-tap Gaussian filter along horz line.
+	vec3 Horz3(vec2 pos,float off)
+	{
+		mat3 m=mat3(Fetch(pos,vec2(-1.0,off)),
+					Fetch(pos,vec2( 0.0,off)),
+					Fetch(pos,vec2( 1.0,off)));
+		float dst=Dist(pos).x;
+		// Convert distance to weight.
+		vec3 v=vec3(Gaus(dst-1.0,hardPix),
+					Gaus(dst+0.0,hardPix),
+					Gaus(dst+1.0,hardPix));
+			// Return filtered sample.
+			return (m*v)/(v.x+v.y+v.z);
+	}
+
+	// 5-tap Gaussian filter along horz line.
+	vec3 Horz5(vec2 pos,float off)
+	{
+		vec3 a=Fetch(pos,vec2(-2.0,off));
+		vec3 b=Fetch(pos,vec2(-1.0,off));
+		vec3 c=Fetch(pos,vec2( 0.0,off));
+		vec3 d=Fetch(pos,vec2( 1.0,off));
+		vec3 e=Fetch(pos,vec2( 2.0,off));
+		float dstx=Dist(pos).x;
+		// Convert distance to weight.
+		float wa=Gaus(dstx-2.0,hardPix);
+		float wb=Gaus(dstx-1.0,hardPix);
+		float wc=Gaus(dstx+0.0,hardPix);
+		float wd=Gaus(dstx+1.0,hardPix);
+		float we=Gaus(dstx+2.0,hardPix);
+		// Return filtered sample.
+		return (a*wa+b*wb+c*wc+d*wd+e*we)/(wa+wb+wc+wd+we);
+	}
+
+	// Allow nearest three lines to effect pixel.
+	vec3 Tri(vec2 pos)
+	{
+		mat3 m=mat3(Horz3(pos,-1.0),
+					Horz5(pos, 0.0),
+					Horz3(pos, 1.0));
+		float dsty=Dist(pos).y;
+		vec3 v=vec3(Gaus(dsty-1.0,hardScan),
+					Gaus(dsty+0.0,hardScan),
+					Gaus(dsty+1.0,hardScan));
+		return m*v;
+	}
+
+	// Distortion of scanlines, and end of screen alpha.
+	vec2 Warp(vec2 pos)
+	{
+		pos=pos*2.0-1.0;
+		pos*=1.0+vec2(pos.y*pos.y,pos.x*pos.x)*warp;
+		return pos*0.5+0.5;
+	}
+
+	vec3 Mask(float x)
+	{
+		vec3 v  = clamp((fract(x)-compos)*hardMask,-1.0/3.0,1.0/3.0);
+		return 2.0/3.0+abs(v);
+	}
+
+	void main()
+	{
+		gl_FragColor.rgb = Tri(Warp(v_texCoord.xy))*Mask(v_texCoord.x*texSize.x);
+		//gl_FragColor.rgb = texture2D(u_texture,v_texCoord).rgb; // original
+		gl_FragColor.a = 1.0;
+	}
+</script>
+
+<script type="text/javascript">
+
+	p8Canvas = document.getElementById("canvas");
+	canvas = p8Canvas.cloneNode(true);
+
+	p8Canvas.name = "p8Canvas";
+	canvas.name = "canvas";
+	canvas.class = "";
+	canvas.width = p8Canvas.clientWidth;
+	canvas.height = p8Canvas.clientHeight;
+	gl = canvas.getContext('webgl');
+
+	if (gl)
+	{
+		p8Canvas.parentNode.insertBefore(canvas,p8Canvas);
+		canvas.parentNode.removeChild(p8Canvas);
+		//canvas.parentNode.style.boxShadow = "0px 0px 20px #000";
+
+		function glresize()
+		{
+			canvas.width = canvas.clientWidth;
+			canvas.height = canvas.clientHeight;
+
+			gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+			gl.uniform2f(gl.getUniformLocation(program, "u_canvasSize"), gl.canvas.width, gl.canvas.height);
+		}
+
+		window.addEventListener('load', glresize, false);
+		window.addEventListener('resize', glresize, false);
+		window.addEventListener('orientationchange', glresize, false);
+		window.addEventListener('fullscreenchange', glresize, false);
+		window.addEventListener('webkitfullscreenchange', glresize, false);//for itch.app
+
+		function compileShader(gl, source, type)
+		{
+			var shader = gl.createShader(type);
+			gl.shaderSource(shader, source);
+			gl.compileShader(shader);
+			if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
+			{
+				var info = gl.getShaderInfoLog(shader);
+				throw ("could not compile shader:" + info);
+			}
+			return shader;
+		};
+
+		var vs_script = document.getElementById("some-vertex-shader");
+		var vs = compileShader(gl, vs_script.text, gl.VERTEX_SHADER);
+		var fs_script = document.getElementById("some-fragment-shader");
+		var fs = compileShader(gl, fs_script.text, gl.FRAGMENT_SHADER);
+
+		program = gl.createProgram();
+		gl.attachShader(program, vs);
+		gl.attachShader(program, fs);
+		gl.linkProgram(program);
+		if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+		{
+			var info = gl.getProgramInfoLog(program);
+			throw ("shader program failed to link:" + info);
+		}
+		gl.useProgram(program)
+
+		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+		gl.uniform3f(gl.getUniformLocation(program, "u_canvasSize"), gl.canvas.width, gl.canvas.height, 0.0 );
+
+		var texCoordLocation = gl.getAttribLocation(program, "a_texCoord");
+		gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1,0, 0,0, 0,1, 0,1, 1,1, 1,0]), gl.STATIC_DRAW);
+		gl.enableVertexAttribArray(texCoordLocation);
+		gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+
+		var positionLocation = gl.getAttribLocation(program, "a_position");
+		gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1,1, -1,1, -1,-1, -1,-1, 1,-1, 1,1]), gl.STATIC_DRAW);
+		gl.enableVertexAttribArray(positionLocation);
+		gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+		gltex = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, gltex);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.activeTexture(gl.TEXTURE0);
+		gl.uniform1i(gl.getUniformLocation(program, "u_texture0"), 0);
+
+		function gldraw()
+		{
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, p8Canvas);
+			gl.drawArrays(gl.TRIANGLES, 0, 6);
+			requestAnimationFrame(gldraw);
+		}
+
+		gldraw();
+	}
+</script>
+<!-- 8< -- ## GL SHADER STUFF ENDS HERE ## -- -->
