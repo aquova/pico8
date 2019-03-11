@@ -110,8 +110,14 @@ function update_main()
 
 	local m=mget(celx,cely)
 	if fget(m,1) then
-		frames=0
-		dead=true
+		die()
+	end
+	
+	for e in all(enemies) do
+		if e:collide(p1.x,p1.y) then
+			die()
+			break
+		end
 	end
 	
 	for t in all(scoretags) do
@@ -150,6 +156,10 @@ function draw_main()
 
 	for t in all(scoretags) do
 		t:draw()
+	end
+	
+	for e in all(enemies) do
+		e:draw()
 	end
 
 	if (p1.d=='u') then
@@ -202,6 +212,11 @@ function checkwalls(d)
 
 	local m=mget(celx,cely)
 	return fget(m,0)
+end
+
+function die()
+	frames=0
+	dead=true
 end
 
 function death()
@@ -342,11 +357,75 @@ function removeitem(x,y,tbl)
 		end
 	end
 end
+
+function queue()
+	local q={}
+	
+	function q:push(i)
+		add(q, i)
+	end
+	
+	function q:pop()
+		local val=q[1]
+		del(q,val)
+		return val
+	end
+	
+	function q:len()
+		return #q
+	end
+	
+	return q:isempty()
+		return #q==0
+	end
+	
+	return q
+end
+
+function bfs(startx,starty)
+	local q=queue()
+	local v={} -- visited
+	q:push({startx,starty})
+	add(v,{startx,starty})
+	
+	while not q:isempty() do
+		local val=q:pop()
+		
+		local neighbors=getneighbors(val[1],val[2])
+		for n in all(neighbors) do
+			-- todo: finish
+		end
+	end
+end
 -->8
 -- enemy functions
 
 function newenemy(x,y)
-	local e={}
+	local e={x=x,y=y,d='u',spd=2}
+	
+	e.update=function(self)
+	
+	end
+	
+	e.collide=function(self,_x,_y)
+		local deltax=abs(_x-e.x)
+		local deltay=abs(_y-e.y)
+		return (deltax<9 and deltay<9)
+	end
+	
+	e.draw=function(self)
+		pal(12,8)
+		if (e.d=='u') then
+ 		spr(1,e.x,e.y)
+ 	elseif (e.d=='d') then
+ 		spr(1,e.x,e.y,1,1,false,true)
+ 	elseif (e.d=='l') then
+ 		spr(2,e.x,e.y)
+ 	elseif (e.d=='r') then
+ 		spr(2,e.x,e.y,1,1,true)
+ 	end
+		pal()
+	end
 
 	return e
 end
@@ -357,6 +436,7 @@ function loadlevel()
 	frames=0
 	flags={}
 	scoretags={}
+	enemies={}
 	fuel=100
 	flagval=0
 	x2=false
@@ -448,6 +528,24 @@ function leveltransition()
 		end
 	else
 		nextlevel()
+	end
+end
+
+function getneighbors(x,y)
+	local n={}
+	
+	local dirs={{0,1},{0,-1},{-1,0},{1,0}}
+	for i in all(dirs) do
+		local ix=mid(1,x+i[1],mapwidth/8)
+		local iy=mid(1,y+i[2],mapheight/8)
+		
+		if (ix~=x) or (iy~=y) then
+		 if mget(ix,iy)==33 then
+				add(n,{ix,iy})
+			end
+		end
+		
+		return n
 	end
 end
 -->8
