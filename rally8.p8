@@ -4,27 +4,43 @@ __lua__
 -- rally-8
 -- @aquova
 
+-- todo
+-- enemies affected by smoke
+-- enemies spin out when collide
+-- high scores
+-- music
+
 function _init()
 	screen=128
 	mapwidth=2*screen
  mapheight=4*screen
-	p1={x=0,y=0,sx=0,sy=0,d='u',spd=2}
-	cam={x=0,y=0}
-
-	-- this can probably be condensed?
+ delay=30
+	
 	turns={u={'r','l'},d={'l','r'},l={'u','d'},r={'d','u'}}
 
+	reset()
+end
+
+function reset()
+	p1={x=0,
+					y=0,
+					sx=0,
+					sy=0,
+					d='u',
+					spd=2
+				}
+				
+	cam={x=0,y=0}
+	
 	lives=2
 	level=1
 	score=0
 	maxflags=10
-
+	
 	dust={}
 	enemies={}
 	scoretags={}
 	
-	loadlevel()
-
 	upd=update_title
 	drw=draw_title
 end
@@ -42,13 +58,13 @@ end
 function update_main()
 	frames+=1
 	
-	if frames<30 then
+	if frames<delay then
 		return
 	elseif trans then
 		leveltransition()
 		return
 	elseif dead then
-		if frames>30 then
+		if frames>delay then
 			death()
 		end
 		return
@@ -91,7 +107,6 @@ function update_main()
 			if not checkwalls(d) then
 				p1.d=d
 				return
-				--break
 			end
 		end
 	end
@@ -113,12 +128,16 @@ function update_main()
 		die()
 	end
 	
-	for e in all(enemies) do
-		if e:collide(p1.x,p1.y) then
-			die()
-			break
-		end
-	end
+	-- give player slight headstart
+	if frames>delay+15 then
+ 	for e in all(enemies) do
+ 		e:update()
+ 		if e:collide(p1.x,p1.y) then
+ 			die()
+ 			break
+ 		end
+ 	end
+ end
 	
 	for t in all(scoretags) do
 		t:update()
@@ -162,15 +181,19 @@ function draw_main()
 		e:draw()
 	end
 
-	if (p1.d=='u') then
-		spr(1,p1.x,p1.y)
-	elseif (p1.d=='d') then
-		spr(1,p1.x,p1.y,1,1,false,true)
-	elseif (p1.d=='l') then
-		spr(2,p1.x,p1.y)
-	elseif (p1.d=='r') then
-		spr(2,p1.x,p1.y,1,1,true)
-	end
+	if dead then
+		spr(6,p1.x,p1.y)
+	else
+ 	if (p1.d=='u') then
+ 		spr(1,p1.x,p1.y)
+ 	elseif (p1.d=='d') then
+ 		spr(1,p1.x,p1.y,1,1,false,true)
+ 	elseif (p1.d=='l') then
+ 		spr(2,p1.x,p1.y)
+ 	elseif (p1.d=='r') then
+ 		spr(2,p1.x,p1.y,1,1,true)
+ 	end
+ end
 	
 	drawfuel()
 	drawbar()
@@ -184,13 +207,7 @@ function checkintersection()
 	local celx=round(p1.x/8)
 	local cely=round(p1.y/8)
 
-	if abs(celx*8-p1.x)==0 then
-		if abs(cely*8-p1.y)==0 then
-			return true
-		end
-	end
-
-	return false
+	return celx*8==p1.x and cely*8==p1.y
 end
 
 function checkwalls(d)
@@ -225,25 +242,32 @@ function death()
 		gameover()
 	end
 	
+	-- reset player position
 	p1.x=p1.sx
 	p1.y=p1.sy
 	p1.d='u'
+	-- reset fuel level
 	fuel=100
 	frames=0
 	dead=false
 	dust={}
+	-- reset score multipliers
 	flagval=0
 	x2=false
 	scoretags={}
+	-- reset camera
 	cam.x=p1.x-(screen/2)+4
 	cam.y=p1.y-(screen/2)+4
 	camera(cam.x,cam.y)
-	-- todo: reset enemy positions too
 
+	-- reset enemies
+	for e in all(enemies) do
+		e:reset()
+	end
 end
 
 function gameover()
-
+	reset()
 end
 
 function createdust()
@@ -315,6 +339,11 @@ function round(x)
 	return flr(x+0.5)
 end
 
+-- returns manhattan distance
+function dist(x1,y1,x2,y2)
+	return abs(x1-x2)+abs(y1-y2)
+end
+
 -- calculates x for centering text between x1 and x2
 function ctext(t,x1,x2)
 	return ((x2-x1)/2)-#t*2
@@ -349,68 +378,130 @@ function printbc(t,y,cin,cout)
 	printb(t,x,y,cin,cout)
 end
 
--- removes from table by xy
-function removeitem(x,y,tbl)
+function finditem(x,y,tbl)
 	for i in all(tbl) do
 		if i[1]==x and i[2]==y then
-			del(tbl,i)
+			return i
+		end
+	end
+
+	return nil
+end
+
+-- removes from table by xy
+function removeitem(x,y,tbl)
+	local search=finditem(x,y,tbl)
+	del(tbl,search)
+end
+
+function floodfill(x,y,arr)
+	arr[x][y]=true
+	
+	local neighbors=getneighbors(x,y)
+	for n in all(neighbors) do
+		if not arr[n[1]][n[2]] then
+			floodfill(n[1],n[2], arr)
 		end
 	end
 end
 
-function queue()
-	local q={}
-	
-	function q:push(i)
-		add(q, i)
-	end
-	
-	function q:pop()
-		local val=q[1]
-		del(q,val)
-		return val
-	end
-	
-	function q:len()
-		return #q
-	end
-	
-	return q:isempty()
-		return #q==0
-	end
-	
-	return q
-end
-
-function bfs(startx,starty)
-	local q=queue()
-	local v={} -- visited
-	q:push({startx,starty})
-	add(v,{startx,starty})
-	
-	while not q:isempty() do
-		local val=q:pop()
-		
-		local neighbors=getneighbors(val[1],val[2])
-		for n in all(neighbors) do
-			-- todo: finish
+function contains(val,tbl)
+	for v in all(tbl) do
+		if v==val then
+			return true
 		end
 	end
+	return false
 end
 -->8
 -- enemy functions
 
 function newenemy(x,y)
-	local e={x=x,y=y,d='u',spd=2}
+	local e={x=x,sx=x,y=y,sy=y,d='u',spd=2}
 	
 	e.update=function(self)
-	
+		-- todo: check if collide with rock
+		-- only turn if at intersection
+		if e:atturn()  then
+			local options=turns[e.d]
+			add(options,e.d)
+			e.d=e:choosebest(options)
+		end
+		
+		if e.d=='u' then 
+			e.y-=e.spd
+		elseif e.d=='l' then
+			e.x-=e.spd
+		elseif e.d=='r' then
+		 e.x+=e.spd
+		elseif e.d=='d' then
+			e.y+=e.spd
+		end
 	end
 	
-	e.collide=function(self,_x,_y)
-		local deltax=abs(_x-e.x)
-		local deltay=abs(_y-e.y)
-		return (deltax<9 and deltay<9)
+	e.reset=function(self)
+		e.x=e.sx
+		e.y=e.sy
+		e.d='u'
+	end
+	
+	e.atturn=function(self)
+		local celx=round(e.x/8)
+		local cely=round(e.y/8)
+		
+		return e.x==celx*8 and e.y==cely*8
+	end
+	
+	e.choosebest=function(self,options)
+		local reverse={d='u',u='d',l='r',r='l'}
+		local bestdir=nil
+		local bestval=9999
+
+	 local celx=round(e.x/8)
+	 local cely=round(e.y/8)
+	 
+	 -- check to see which directions is valid turn
+	 -- of those, see which is closest to player
+	 for d in all(options) do
+	 	local m
+	 	local d2p
+			if d=='u' then
+				m=mget(celx,cely-1)
+				d2p=dist(p1.x,p1.y,e.x,e.y-1)
+			elseif d=='d' then
+				m=mget(celx,cely+1)
+				d2p=dist(p1.x,p1.y,e.x,e.y+1)
+			elseif d=='l' then
+				m=mget(celx-1,cely)
+				d2p=dist(p1.x,p1.y,e.x-1,e.y)
+			elseif d=='r' then
+				m=mget(celx+1,cely)
+				d2p=dist(p1.x,p1.y,e.x+1,e.y)
+			end
+			
+			if m==33 then
+				if d2p<bestval then
+					bestdir=d
+					bestval=d2p
+				end			
+			end
+		end
+		
+		-- if deadend (from rocks), reverse
+		if bestdir==nil then
+			bestdir=reverse[e.d]
+		end
+		return bestdir
+	end
+	
+	e.collide=function(self,x,y)
+		local celx=round(x/8)
+		local cely=round(y/8)
+		
+		local ecelx=round(e.x/8)
+		local ecely=round(e.y/8)
+		
+		return (celx==ecelx and cely==ecely)
 	end
 	
 	e.draw=function(self)
@@ -444,12 +535,13 @@ function loadlevel()
 	dead=false
 
 	-- resets map
-	reload()
+	reload()	
+	
 	-- iterate through map, replace special tiles with objects
 	for x=0,mapwidth/8 do
 		for y=0,mapheight/8 do
 			if mget(x,y)==8 then
-				mset(x,y,33)
+				--mset(x,y,33)
 				p1.sx=8*x
 				p1.x=p1.sx
 				p1.sy=8*y
@@ -462,16 +554,19 @@ function loadlevel()
 			end
 		end
 	end
-
-	placeflags()
+	
 	placerocks()
+	local flagarray=genflagarray()
+	floodfill(p1.sx/8,p1.sy/8, flagarray)
+	placeflags(flagarray)
+	mset(p1.sx/8,p1.sy/8,33)
 	
 	cam.x=p1.x-(screen/2)+4
 	cam.y=p1.y-(screen/2)+4
 	camera(cam.x,cam.y)
 end
 
-function placeflags()
+function placeflags(arr)
 	local sflag=1
 	local flag=maxflags-1
 
@@ -479,7 +574,7 @@ function placeflags()
 	repeat
 		local x=flr(rnd(mapwidth/8))
 		local y=flr(rnd(mapheight/8))
-		if mget(x,y)==33 then
+		if mget(x,y)==33 and arr[x][y] then
 			mset(x,y,4)
 			add(flags,{x,y})
 			sflag-=1
@@ -490,7 +585,7 @@ function placeflags()
 	repeat
 		local x=flr(rnd(mapwidth/8))
 		local y=flr(rnd(mapheight/8))
-		if mget(x,y)==33 then
+		if mget(x,y)==33 and arr[x][y] then
 			mset(x,y,3)
 			add(flags,{x,y})
 			flag-=1
@@ -502,10 +597,10 @@ function placerocks()
 	local rocks=5
 
 	repeat
-		-- todo: dont put rocks next to flags
 		local x=flr(rnd(mapwidth/8))
 		local y=flr(rnd(mapheight/8))
-		if mget(x,y)==33 then
+		local d=dist(x,p1.sx,y,p1.sy)
+		if mget(x,y)==33 and d>5 then
 			mset(x,y,5)
 			rocks-=1
 		end
@@ -531,6 +626,7 @@ function leveltransition()
 	end
 end
 
+-- x and y should be cell values
 function getneighbors(x,y)
 	local n={}
 	
@@ -543,11 +639,26 @@ function getneighbors(x,y)
 		 if mget(ix,iy)==33 then
 				add(n,{ix,iy})
 			end
-		end
-		
-		return n
+		end	
 	end
+
+	return n
 end
+
+function genflagarray()
+	local a={}
+	
+	for x=1,mapwidth/8 do
+		local row={}
+		for y=1,mapheight/8 do
+			add(row,false)
+		end
+		add(a,row)
+	end
+	
+	return a
+end
+
 -->8
 -- drawing functions
 
@@ -563,6 +674,14 @@ function drawminimap()
 		local fy=f[2]/2
 		pset(mapx+fx,mapy+fy,10)
 	end
+	
+	-- draw enemies
+	for e in all(enemies) do
+		local ex=e.x/16
+		local ey=e.y/16
+		pset(mapx+ex,mapy+ey,8)
+	end
+	
 	-- draw player
 	pset(mapx+p1.x/16,mapy+p1.y/16,12)
 end
@@ -627,6 +746,7 @@ function update_title()
 	if btnp(❎) or btnp(🅾️) then
 		upd=update_main
 		drw=draw_main
+		loadlevel()
 	end
 end
 
@@ -635,14 +755,14 @@ function draw_title()
 	printbc("rally-8",screen/2,7,0)
 end
 __gfx__
-00000000050cc05000000555ffaaffffffaaffffffffffff00888800004444005555555555555555000000000000000000000000000000000000000000000000
-00000000055cc55055500050ffaaafffffaaaffffff555ff08899880044994405000000550000005000000000000000000000000000000000000000000000000
-00700700050cc050050cccccffaaaaffffaaaaffff5fff5f889aa988449ff944500cc00550800805000000000000000000000000000000000000000000000000
-0007700000cccc00cccc777cffaaaaafffaaa888f54444f589a77a9849f77f9450c00c0550088005000000000000000000000000000000000000000000000000
-0007700000c77c00cccc777cffafffffffaf8fff5444444589a77a9849f77f9450c00c0550088005000000000000000000000000000000000000000000000000
-0070070050c77c05050cccccffafffffffaff88f54444445889aa988449ff944500cc00550800805000000000000000000000000000000000000000000000000
-0000000055c77c5555500050ffafffffffaffff85444444508899880044994405000000550000005000000000000000000000000000000000000000000000000
-0000000050cccc0500000555faaafffffaaa888ff555555f00888800004444005555555555555555000000000000000000000000000000000000000000000000
+00000000050cc05000000555ffaaffffffaaffffffffffff00888800004444005555555555555555555555550000000000000000000000000000000000000000
+00000000055cc55055500050ffaaafffffaaaffffff555ff08899880044994405000000550000005500000050000000000000000000000000000000000000000
+00700700050cc050050cccccffaaaaffffaaaaffff5fff5f889aa988449ff944500cc00550800805509999050000000000000000000000000000000000000000
+0007700000cccc00cccc777cffaaaaafffaaa888f54444f589a77a9849f77f9450c00c0550088005509009050000000000000000000000000000000000000000
+0007700000c77c00cccc777cffafffffffaf8fff5444444589a77a9849f77f9450c00c0550088005509009050000000000000000000000000000000000000000
+0070070050c77c05050cccccffafffffffaff88f54444445889aa988449ff944500cc00550800805509999050000000000000000000000000000000000000000
+0000000055c77c5555500050ffafffffffaffff85444444508899880044994405000000550000005500000050000000000000000000000000000000000000000
+0000000050cccc0500000555faaafffffaaa888ff555555f00888800004444005555555555555555555555550000000000000000000000000000000000000000
 ffffffffffffffffffffffffbbbbbbbbbbbbbbbbffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000
 fff999999999999999999fffbbbbbbbbbbbbbbbbff9999ffff99999999999999999999ff00000000000000000000000000000000000000000000000000000000
 ff9bbbbbbbbbbbbbbbbbb9ffbbbbbbbbbbbbbbbbf9bbbb9ff9bbbbbbbbbbbbbbbbbbbb9f00000000000000000000000000000000000000000000000000000000
@@ -792,9 +912,9 @@ __map__
 2221212120342221212121252125212508252125212521202221101111122120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 2221152120342221101221252125212521252125212521202221201331322120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 2221352120342221303221252125212521252125212521202221202221212120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-2221212120342221212121250925092521250925092521303221303221332120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+2221212120342221212121252125212521252125212521303221303221332120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 2221101124342311122121352135213521352135213521212121212121212120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-2221303131313131322121212121212121212121212121161821161717182120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+2221303131313131322121210921212109212121092121161821161717182120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 2221212121212121212121161717171717171717171821212121212121212120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 2312212121261821101221212121212121212121212121211011111111122120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 3423122126372121202312212121211012212617272115213031141331322120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
