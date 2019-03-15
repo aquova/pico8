@@ -4,3 +4,4 @@
 *.png
 !docs/images/*.png
 *.wav
+demos

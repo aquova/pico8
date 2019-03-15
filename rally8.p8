@@ -5,8 +5,8 @@ __lua__
 -- @aquova
 
 -- todo
--- enemies affected by smoke
--- enemies spin out when collide
+-- slight delay between levels
+-- title screen
 -- high scores
 -- music
 
@@ -15,8 +15,11 @@ function _init()
 	mapwidth=2*screen
  mapheight=4*screen
  delay=30
+ spindelay=delay+10
+ spinbuf=10
 	
 	turns={u={'r','l'},d={'l','r'},l={'u','d'},r={'d','u'}}
+	reverse={d='u',u='d',l='r',r='l'}
 
 	reset()
 end
@@ -281,7 +284,7 @@ function createdust()
 	end
 	
 	d.die=function(self)
-		return (self.age>30)
+		return (self.age>delay)
 	end
 	
 	-- checks if {x,y} is in dust
@@ -417,11 +420,43 @@ end
 -- enemy functions
 
 function newenemy(x,y)
-	local e={x=x,sx=x,y=y,sy=y,d='u',spd=2}
+	local e={x=x,
+									 sx=x,
+									 y=y,
+									 sy=y,
+									 d='u',
+									 sd='u',
+									 spd=2,
+									 spinning=false,
+									 timer=0}
 	
 	e.update=function(self)
-		-- todo: check if collide with rock
-		-- only turn if at intersection
+		if e.spinning then
+			e:spinout()
+			return
+		elseif e.timer>0 then
+			-- this is to avoid immediately retriggering spin
+			e.timer-=1
+		else
+ 		-- check for collision with other enemies
+ 		for other in all(enemies) do
+ 			if other~=self then
+ 				if e:collide(other.x,other.y) then
+ 					e:startspinning()
+ 					if other.d==e.d then
+ 						other:startspinning(reverse[other.d])
+ 					else
+ 						other:startspinning()
+ 					end
+ 					return
+ 				end
+ 			end
+ 		end
+		end
+		
+		e:checkdust()
+
+		-- only turn if at intersection		
 		if e:atturn()  then
 			local options=turns[e.d]
 			add(options,e.d)
@@ -445,6 +480,25 @@ function newenemy(x,y)
 		e.d='u'
 	end
 	
+	function e:startspinning(--[[optional]]direction)
+		e.spinning=true
+		e.sd=direction or e.d
+	end
+	
+	e.spinout=function(self)
+		e.timer+=1
+		
+		if e.timer<spindelay then
+			e.d=turns[e.d][1]
+		else
+			e.spinning=false
+			e.timer=spinbuf
+			e.d=e.sd
+			e.x=8*round(e.x/8)
+			e.y=8*round(e.y/8)
+		end
+	end
+	
 	e.atturn=function(self)
 		local celx=round(e.x/8)
 		local cely=round(e.y/8)
@@ -453,7 +507,6 @@ function newenemy(x,y)
 	end
 	
 	e.choosebest=function(self,options)
-		local reverse={d='u',u='d',l='r',r='l'}
 		local bestdir=nil
 		local bestval=9999
 
@@ -479,7 +532,7 @@ function newenemy(x,y)
 				d2p=dist(p1.x,p1.y,e.x+1,e.y)
 			end
 			
-			if m==33 then
+			if m==33 or m==3 or m==4 then
 				if d2p<bestval then
 					bestdir=d
 					bestval=d2p
@@ -502,6 +555,15 @@ function newenemy(x,y)
 		local ecely=round(e.y/8)
 		
 		return (celx==ecelx and cely==ecely)
+	end
+
+	function e:checkdust()
+		for d in all(dust) do
+			if e:collide(d.x*8,d.y*8) then
+				e:startspinning()
+				break
+			end
+		end
 	end
 	
 	e.draw=function(self)
@@ -541,7 +603,6 @@ function loadlevel()
 	for x=0,mapwidth/8 do
 		for y=0,mapheight/8 do
 			if mget(x,y)==8 then
-				--mset(x,y,33)
 				p1.sx=8*x
 				p1.x=p1.sx
 				p1.sy=8*y
@@ -600,7 +661,7 @@ function placerocks()
 		local x=flr(rnd(mapwidth/8))
 		local y=flr(rnd(mapheight/8))
 		local d=dist(x,p1.sx,y,p1.sy)
-		if mget(x,y)==33 and d>5 then
+		if mget(x,y)==33 and d>10 then
 			mset(x,y,5)
 			rocks-=1
 		end
