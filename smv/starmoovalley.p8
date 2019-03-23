@@ -426,21 +426,21 @@ end
 
 cowdata={
 	{10,215,"cassie",{{"hey, thanks for sticking","with me all these years"},{"oh murr",""},{"since it's a special day,","i'd cream your nipples"},{"psst, it's your birthday..","oh yeah everyone knows, shit."}},2},
-	{150,70,"bee",{{"i wonder if my milk tastes","like honey, that'd be the tits"},{"jade you're the breast server owner i've ever met!"},"i hope my boob puns are good enough, they're tit or miss"},4},
-	{50,50,"newit",{"i tried baking you a cake.. but i blewit","world domination? dewit.","it's your birthday!? i knewit..","happy birthday to you! happy birthday too.. ah screwit"},6},
- {70,240,"crumbledore",{"life is but an illusion"},8},
-	{9,25,"arphenion",{"it's pronounced jif today only"},10},
-	{100,100,"toe",{"i'm lactoes intolerant but u'r worth the explosive diarrhea.","haoiy borthday jad gope u havr an wondrfol dzy","the cow is the only marine creature to enjoy vienna sausages"},12},
-	{130,172,"apple",{"happy birbday!","...","u-uh? of course i'm cow.","ah--..m-moo?"},14},
-	{87,72,"jev",{"..."},32},
-	{172,172,"ian",{"ur face is a cow","moove along","orange you glad i didn't say moo?","i lost the game"},34},
-	{20,107,"poptart",{"..."},36},
-	{210,130,"badiyanu",{"..."},38},
-	{100,20,"ary",{"..."},40},
-	{186,74,"zaph",{"..."},42},
-	{150,230,"aquova",{"..."},44},
-	{155,90,"danny",{"..."},46},
-	{200,50,"iris",{"..."},70}
+	{150,70,"bee",{{"try my honey milk, it's the","tits."},{"jade you're the breast","server owner i've ever met!"},{"boob puns are always a tit","or miss"},{"you better be playing with","sound on wink wink"},{"i hope i'm not overmilking","the tit puns."},{"tit tit tit tit tit tit boob","breast double d tiddies"}},4},
+	{50,50,"newit",{{"i tried baking you a cake..","but i blewit"},{"world domination? dewit.",""},{"it's your birthday!? i","knewit.."},{"happy birthday to you! happy","birthday to.. ah screwit"}},6},
+ {70,240,"crumbledore",{{"life is but an illusion",""}},8},
+	{9,25,"arphenion",{{"it's pronounced jif today","only"}},10},
+	{100,100,"toe",{{"i'm lactoes intolerant but","u'r worth the explosive diarrhea."},{"haoiy borthday jad gope u","havr an wondrfol dzy"},{"the cow is the only marine","creature to enjoy vienna sausages"}},12},
+	{130,172,"apple",{{"happy birbday!",""},{"...",""},{"u-uh? of course i'm cow.",""},{"ah--..m-moo?",""}},14},
+	{87,72,"jev",{{"...",""}},32},
+	{172,172,"ian",{{"ur face is a cow",""},{"moove along",""},{"orange you glad i didn't","say moo?"},{"i lost the game",""}},34},
+	{20,107,"poptart",{{"happy day of the birth!",""},{"the cow say- reeeeee",""},{"licking doorknobs is illegal","on other planets"},{"the cake is not a lie",""}},36},
+	{210,130,"badiyanu",{{"*white guy blinking*",""},{"*glub glub* he whispers",""},{"happy birthday, jade!",""},{"y'all have fun now.",""}},38},
+	{100,20,"ary",{{"...",""}},40},
+	{186,74,"zaph",{{"...",""}},42},
+	{150,230,"aquova",{{"this is a chrono trigger","reference, u don't get it"}},44},
+	{155,90,"danny",{{"...",""}},46},
+	{200,50,"iris",{{"...",""}},70}
 }
 __gfx__
 000000000aaaaaa03333333333333333333333333333333333300000033333333333333333333333333333333333333333333333333333333333333333333333
