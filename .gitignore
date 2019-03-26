@@ -3,6 +3,6 @@
 *.p8.png
 *.png
 !docs/images/*.png
-!smv
+!smv/*
 *.wav
 demos
