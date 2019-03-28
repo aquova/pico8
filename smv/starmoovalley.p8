@@ -8,10 +8,24 @@ function _init()
 	screen=128
 	mapsize=2*screen -- i'm not sure if i ever use this
 	threshold=20
+
+	reset()
+end
+
+function _update()
+	_upd()
+end
+
+function _draw()
+	_drw()
+end
+
+function reset()
 	displaying=false -- displaying any message?
 	showgift=false
 
 	cam={x=0,y=0}
+	camera(cam.x,cam.y)
 	p1=createplayer()
 	cows=generatecows()
 	cowlist=generatecowlist()
@@ -24,14 +38,7 @@ function _init()
 	
 	_upd=update_title
 	_drw=draw_title
-end
-
-function _update()
-	_upd()
-end
-
-function _draw()
-	_drw()
+	music(-1,300)
 end
 -->8
 -- title screen
@@ -195,7 +202,7 @@ function newcow(input)
 		h=16,
 		name=input[3],
 		phrases=input[4],
-		phrasenum=1,
+		phrasenum=0,
 		sprnum=input[5],
 		display=false,
 		sound=input[5]/2
@@ -224,7 +231,8 @@ function newcow(input)
 	end
 
 	function c:nextphrase()
-		self.phrasenum=flr(rnd(#self.phrases))+1
+		--self.phrasenum=flr(rnd(#self.phrases))+1
+		self.phrasenum=(self.phrasenum+1)%#self.phrases
 	end
 
 	function c:removefromlist()
@@ -241,15 +249,20 @@ function newcow(input)
 		local frame=3
 
 		rectfill(cam.x,cam.y+py,cam.x+screen,cam.y+screen,4)
-		rectfill(cam.x+frame,cam.y+py+frame,cam.x+screen-frame,cam.y+screen-frame,15)
+		rectfill(cam.x+frame-1,cam.y+py+frame,cam.x+screen-frame,cam.y+screen-frame,15)
+		rectfill(cam.x,cam.y+py,cam.x+frame+1,cam.y+py+frame+1,9)
+		rectfill(cam.x,cam.y+screen-frame-1,cam.x+frame+1,cam.y+screen,9)
+		rectfill(cam.x+screen-frame-1,cam.y+py,cam.x+screen,cam.y+py+frame+1,9)
+		rectfill(cam.x+screen-frame-1,cam.y+screen-frame-1,cam.x+screen,cam.y+screen,9)
+
 		-- 28 chars per line
 		sprint(self.name,cam.x+7,cam.y+py+7,5,6)
-		sprint(self.phrases[self.phrasenum][1],cam.x+12,cam.y+py+15,5,6)
-		sprint(self.phrases[self.phrasenum][2],cam.x+12,cam.y+py+21,5,6)
+		sprint(self.phrases[self.phrasenum+1][1],cam.x+12,cam.y+py+15,5,6)
+		sprint(self.phrases[self.phrasenum+1][2],cam.x+12,cam.y+py+21,5,6)
 	end
 
 	-- randomly pick phrase to start
-	c:nextphrase()
+	--c:nextphrase()
 	return c
 end
 
@@ -417,7 +430,7 @@ function createplayer()
 	end
 
 	function p:checkforcake()
-		if showgift then
+		if showgift and not gift.cake then
 			if dist(gift.x+gift.w/2,gift.y+gift.h/2,self.x+self.w/2,self.y+self.h/2)<threshold then
 				gift.cake=true
 				music(0)
@@ -462,7 +475,7 @@ cowdata={
 	{50,50,"newit",{{"i tried baking you a cake..","but i blewit"},{"world domination? dewit.",""},{"it's your birthday!? i","knewit.."},{"happy birthday to you! happy","birthday to.. ah screwit"}},6},
  {70,240,"crumbledore",{{"maybe shin isn't that bad",""},{"tell your cat i said hi",""},{"happy birthday nerd",""}},8},
 	{9,25,"arph",{{"it's pronounced jif today","only"}},10},
-	{100,100,"toe",{{"i'm lactoes intolerant but u","r worf the explosiv diarrhea"},{"haoiy borthday jad gope u","havr an wondrfol dzy"},{"the cow is the only marine","creature to eat vienna sausage"}},12},
+	{80,100,"toe",{{"i'm lactoes intolerant but u","r worf the explosiv diarrhea"},{"haoiy borthday jad gope u","havr an wondrfol dzy"},{"the cow is the only marine","creature to eat vienna sausage"}},12},
 	{130,172,"apple",{{"happy birbday!",""},{"...",""},{"u-uh? of course i'm cow.",""},{"ah--..m-moo?",""}},14},
 	{87,72,"jev",{{"...",""}},32},
 	{172,172,"ian",{{"ur face is a cow",""},{"moove along",""},{"orange you glad i didn't","say moo?"},{"i lost the game",""}},34},
@@ -494,6 +507,10 @@ function update_ending()
 		cam.y=min(cam.y+1,550-screen/2+8)
 	end
 	camera(cam.x,cam.y)
+	
+	if endingframes==1000 then
+		reset()
+	end
 end
 
 function draw_ending()
