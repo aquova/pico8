@@ -1,6 +1,9 @@
 pico-8 cartridge // http://www.pico-8.com
 version 18
 __lua__
+-- huck dunt
+-- @aquova
+
 c=4r=rnd
 function d(x,y)local u={x=x,y=y,w=sgn(r()-.5),h=sgn(r()-.5),c=c}function u:u()u.x+=u.w
 u.y+=u.h
