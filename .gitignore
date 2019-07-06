@@ -1,8 +1,14 @@
+# Generated files
 *.bin
 *.gif
 *.p8.png
 *.png
+*.wav
+
+# Need to back up docs
 !docs/images/*.png
 !smv/*
-*.wav
-demos
+
+# Stuff that isn't mine
+demos/*
+BBS/*
