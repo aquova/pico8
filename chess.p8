@@ -1,0 +1,64 @@
+pico-8 cartridge // http://www.pico-8.com
+version 18
+__lua__
+-- chess
+-- @aquova
+
+-- consts
+screen=128
+border=16
+grid_size=(screen-2*border)/8
+
+function _init()
+	-- enable mouse
+	poke(0x5f2d,1)
+	board=create_board()
+	pointer={x=0,y=0}
+end
+
+function _update()
+	if btnp(⬅️) then
+		pointer.x=max(0,pointer.x-1)
+	elseif btnp(➡️) then
+		pointer.x=min(7,pointer.x+1)
+	end
+	
+	if btnp(⬆️) then
+		pointer.y=max(0,pointer.y-1)
+	elseif btnp(⬇️) then
+		pointer.y=min(7,pointer.y+1)
+	end
+end
+
+function _draw()
+	cls(11)
+	draw_board()
+	draw_pointer()
+end
+-->8
+-- board
+
+function create_board()
+	
+end
+
+function draw_board()
+	rectfill(border-2,border-2,border+(8*grid_size)+2,border+(8*grid_size)+2,4)
+	for x=0,7 do
+		for y=0,7 do
+			local col=(x+y)%2==0 and 7 or 0
+			rectfill(border+grid_size*x,border+grid_size*y,border+grid_size*(x+1),border+grid_size*(y+1),col)
+		end
+	end
+end
+
+function draw_pointer()
+	rect(border+grid_size*pointer.x-1,border+grid_size*pointer.y-1,border+grid_size*(pointer.x+1),border+grid_size*(pointer.y+1),8)
+end
+__gfx__
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
