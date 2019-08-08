@@ -43,7 +43,7 @@ function _update()
 	
 	if btnp(❎) then
 		if selected==nil then
-			selected=pointer
+			selected={x=pointer.x,y=pointer.y}
 		else
 			board[selected.y][selected.x]:move(pointer.x,pointer.y)
 		end
@@ -125,26 +125,19 @@ end
 -->8
 -- pieces
 
-local check_fns={
-	check_pawn,
-	check_bishop,
-	check_knight,
-	check_rook,
-	check_queen,
-	check_king
-}
-
 function piece(is_white,rank,x,y)
 	local p={
 		x=x,
 		y=y,
 		rank=rank,
-		white=is_white
+		white=is_white,
+		moved=false
 	}
 	
 	-- setup move callback
-	p.check_moves=check_fns[p.rank]
-	p.moved=false
+	function p:check_moves()
+		return check_fns[self.rank](self,board)
+	end
 	
 	function p:is_white()
 		return self.white
@@ -159,9 +152,11 @@ function piece(is_white,rank,x,y)
 	end
 	
 	function p:move(x,y)
-		local moves=self:check_moves(board)
-		
+		local moves=p:check_moves(board)
+		--printh(#moves)
 		if includes({x,y},moves) then
+			board[self.y][self.x]=nil
+			board[y][x]=self
 			self.x=x
 			self.y=y
 			selected=nil
@@ -191,23 +186,23 @@ end
 
 -- callback functions
 -- returns a table of valid move coords
-function check_pawn(board)
+function check_pawn(self,board)
 	local moves={}
 	
 	local forward=self.white and -1 or 1
-
-	-- pawns can only move forward if noone there
-	if board[self.y+forward][self.x]~=nil then
+	-- pawns can only move forward if no one there
+	if board[self.y+forward][self.x]==nil then
 		add(moves,{self.x,self.y+forward})
 		-- if its their first move, can jump two
-		if board[self.y+2*forward][self.x]~=nil then
+		if board[self.y+2*forward][self.x]==nil then
 			add(moves,{self.x,self.y+2*forward})
 		end
 	end
 	
 	-- pawns attack diagonally
 	for x=self.x-1,self.x+1,2 do
-		if board[self.y+forward][x].is_white()~=self.white then
+		if board[self.y+forward][x]~=nil and
+		board[self.y+forward][x].is_white()~=self.white then
 			add(moves,{x,self.y+forward})
 		end
 	end
@@ -237,6 +232,16 @@ end
 function check_king()
 
 end
+
+check_fns={
+	check_pawn,
+	check_bishop,
+	check_knight,
+	check_rook,
+	check_queen,
+	check_king
+}
+
 __gfx__
 00000000088880000888800008000080088880000088800008000800000000000000000000000000000000000000000000000000000000000000000000000000
 00000000080008000800080008800080080008000800080008008000000000000000000000000000000000000000000000000000000000000000000000000000
