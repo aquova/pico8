@@ -10,5 +10,6 @@
 !smv/*
 
 # Stuff that isn't mine
-demos/*
-BBS/*
+**/demos
+**/BBS
+**/archive
