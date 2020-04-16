@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 18
+version 19
 __lua__
 -- honeytrap
 -- by austin and kristin
@@ -38,6 +38,11 @@ function init_main()
 	pollen_g=new_gauge(screen-15,10,10,screen-20,9)
 	flowers={}
 	add(flowers,new_flower(50,50))
+	add(flowers,new_flower(0,0))
+	add(flowers,new_flower(100,100))
+	add(flowers,new_flower(100,0))
+	add(flowers,new_flower(0,100))
+
 
 	cam={
 		x=bee.x-half_scrn,
@@ -56,9 +61,9 @@ function draw_main()
 	for f in all(flowers) do
 		f:draw()
 	end
-	--pollen_g:draw()
+	pollen_g:draw()
 	bee:draw()
-	draw_debug()
+	--draw_debug()
 end
 
 function set_cam()
@@ -76,8 +81,6 @@ end
 function draw_debug()
 	cursor(cam.x+5,cam.y+5,8)
 	print("ang:"..bee.a)
-	cursor(cam.x+5,cam.y+12)
-	print("cpu: "..(stat(1)*100).."%")
 end
 -->8
 -- bee stuff
@@ -103,7 +106,8 @@ function make_bee(_x,_y,_state)
 		pts=queue(),
 		buf={x=24,y=0}, -- pixel coords on sprite map
 		shdw=(_state==bee_states.demo and 1 or max_shdw),
-		pollen=0
+		pollen=0,
+		my_flower=nil,
 	}
 	
 	function b:update()
@@ -118,6 +122,7 @@ function make_bee(_x,_y,_state)
 			self:rot()
 			if btnp(❎) then
 				self.state=bee_states.liftoff
+				self.my_flower=nil
 			end
 		elseif self.state==bee_states.landing then
 			self.shdw-=1
@@ -165,10 +170,18 @@ function make_bee(_x,_y,_state)
 			moved=true		
 		end
 
-		if moved and self.state==bee_states.landed then
+		if moved and self.state==bee_states.landed then		
+			local shx=self.x+self.size/2+self.shdw
+		 local shy=self.y+self.size/2+self.shdw
+			
 			if frames%10==0 then
 				self.pollen+=10
 				pollen_g:update(self.pollen)
+			end
+
+			if not self.my_flower:onflower(shx,shy) then
+				self.state=bee_states.liftoff
+				self.my_flower=nil
 			end
 		end
 	end
@@ -194,6 +207,7 @@ function make_bee(_x,_y,_state)
 		for f in all(_flowers) do
 			if f:onflower(shx,shy) then
 				self.state=bee_states.landing
+				self.my_flower=f
 				return
 			end
 		end
@@ -265,31 +279,45 @@ function new_flower(_x,_y)
 	local f={
 		x=_x,
 		y=_y,
-		spt=19,
-		ssize=2,
+		size=16, -- in pixels
+		leaf_spt=7,
+		spt_x=40,
+		spt_y=0
 	}
 	
 	function f:draw()
 		local cx,cy=get_center_screen()
 		local dx,dy=self.x-cx,self.y-cy
 		local px,py=dx/half_scrn,dy/half_scrn
-		local fx=px*max_parallax+self.x
-		local fy=py*max_parallax+self.y
-		spr(7,self.x-8,self.y,2,2)
-		spr(7,self.x+8,self.y,2,2,true,false)
-		sspr(40,0,16,16,fx,fy,32,32)
+		local fx,fy=px*max_parallax,py*max_parallax
+
+		local gnd_x,gnd_y=self.x+8,self.y+4
+		local leaf_x,leaf_y=self.x+fx/2,self.y+fy/2-4
+		local flower_x=self.x+fx-self.size/2
+		local flower_y=self.y+fy-self.size/2
+		line(gnd_x,gnd_y,leaf_x+8,leaf_y+4,4)
+		spr(self.leaf_spt,leaf_x-8,leaf_y,2,2)
+		spr(self.leaf_spt,leaf_x+8,leaf_y,2,2,true,false)
+		line(flower_x+self.size,flower_y+self.size,4)
+		sspr(
+			self.spt_x,self.spt_y,
+			self.size,self.size,
+			flower_x,
+			flower_y,
+			2*self.size,2*self.size
+		)
 	end
 	
 	function f:getcenter()
-		local cx=self.x+4*self.ssize
-		local cy=self.y+4*self.ssize
+		local cx=self.x+self.size/2
+		local cy=self.y+self.size/2
 		return cx,cy
 	end
 	
 	function f:onflower(x,y)
 		local cx,cy=self:getcenter()
 		local d=dist(x,y,cx,cy)
-		return d<8*self.ssize
+		return d<=self.size/2
 	end
 	
 	return f
@@ -394,7 +422,7 @@ end
 function dist(_x1,_y1,_x2,_y2)
  local dx=abs(_x1-_x2)
  local dy=abs(_y1-_y2)
- return sqrt(dx*dx+dy+dy)
+ return sqrt(dx*dx+dy*dy)
 end
 
 function get_center_screen()
