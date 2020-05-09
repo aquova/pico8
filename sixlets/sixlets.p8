@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 21
+version 23
 __lua__
 -- sixlets
 -- @aquova
@@ -51,6 +51,7 @@ function reset()
 	game_diff=nil
 
 	g_cursor={x=0,y=0}
+	high_scores=load_hs()
 end
 
 function init_game()
@@ -74,12 +75,11 @@ function init_game()
 		grid=populate_grid()
 	until not is_gameover()
 
-	high_scores=load_hs()
-
 	pts=0
 	time_goal=timed_len
 	floating={}
 	start_time=0
+	shake=0
 end
 
 function update_game()
@@ -121,6 +121,7 @@ function draw_game()
 		f:draw()
 	end
 	highlight_tile()
+	screen_shake()
 end
 
 function game_input()
@@ -213,7 +214,8 @@ end
 
 function print_time()
 	local time_t=format_t(time_goal)
-	print(time_t,screen/2+3,board_margin-board_tab+3,7)
+	local x=rtext(time_t,board_margin+2)
+	print(time_t,x,board_margin-board_tab+3,7)
 end
 -->8
 -- gameplay
@@ -259,8 +261,11 @@ function fall_tiles()
 		local empty={}
 		for y=board_size,1,-1 do
 			if grid[x][y]==0 then
+				-- remove tile
 				add(empty,y)
+				explosion(board_margin+8*(x-1)+4,board_margin+8*(y-1)+4)
 			elseif #empty~=0 then
+				-- move tile down
 				local y2=empty[1]
 				grid[x][y],grid[x][y2]=grid[x][y2],grid[x][y]
 				del(empty,y2)
@@ -268,6 +273,7 @@ function fall_tiles()
 			end
 		end
 		for i in all(empty) do
+			-- repopulate empty slots at top
 			grid[x][i]=rnd_tile()
 		end
 	end
@@ -275,17 +281,16 @@ end
 
 function calc_bonus(_cnt)
 	local adj=_cnt-match_min+1
-	local reward=0
+	local reward=adj*adj+1
 	if game_mode==modes.score then
-		reward=10*(adj*adj+1)
 		pts+=reward
 	elseif game_mode==modes.timed then
-		reward=adj*adj+1
 		time_goal+=reward
 	else
 		assert(false,"invalid game mode")
 	end
 	add(floating,make_label(reward,get_cursor_cel()))
+	shake+=1
 end
 
 function is_gameover()
@@ -335,7 +340,7 @@ function update_results()
 	update_floating()
 	if t()-start_time>5 then
 		if btnp(❎) then
-			if is_hs(high_scores,pts,game_mode==modes.timed) then
+			if is_hs() then
 				_upd=update_name_entry()
 				_drw=draw_name_entry()
 			else
@@ -347,7 +352,7 @@ end
 
 function draw_results()
 	draw_game()
-	local x=ctext("game over",0,screen)
+	local x=ctext("game over")
 	printb("game over",x,screen/2,8,0)
 end
 
@@ -381,6 +386,24 @@ function flood_fill(_g,_x,_y,_t)
 	return cnt
 end
 
+-- from here:https://www.lexaloffle.com/bbs/?tid=28306
+function screen_shake()
+	-- generate random vals between -4 and 4
+	local sx=1-rnd(2)
+	local sy=1-rnd(2)
+
+	sx*=shake
+	sy*=shake
+
+	camera(sx,sy)
+
+	shake*=0.75
+	-- if shake falls below threshold, stop
+	if shake<0.1 then
+		shake=0
+	end
+end
+
 function deep_2d_copy(_g)
 	local copy={}
 
@@ -405,8 +428,8 @@ function printb(_t,_x,_y,_ci,_co)
 	print(_t,_x,_y,_ci)
 end
 
-function ctext(_t,_x1,_x2)
-	return (_x2-_x1)/2-2*#_t
+function ctext(_t)
+	return screen/2-2*#_t
 end
 
 function rtext(_t,_x)
@@ -427,8 +450,9 @@ function format_t(_t)
 	return minutes..":"..seconds
 end
 -->8
--- point labels
+-- effects
 
+-- todo: learn how lua inheritance works
 function make_label(_p,_x,_y)
 	local l={
 		text="".._p,
@@ -457,12 +481,52 @@ function make_label(_p,_x,_y)
 
 	return l
 end
+
+function make_particle(_x,_y)
+	local p={
+		x=_x,
+		y=_y,
+		col=rnd({8,9,3,12,13,6}),
+		age=0,
+		a=rnd(),
+		spd=1+rnd(2),
+		max_age=15+rnd(5)
+	}
+
+	p.dx=sin(p.a)*p.spd
+	p.dy=cos(p.a)*p.spd
+
+	function p:update()
+		self.x+=self.dx
+		self.y+=self.dy
+		self.age+=1
+		--gravity
+		self.dy+=0.15
+	end
+
+	function p:should_die()
+		return self.age>self.max_age
+	end
+
+	function p:draw()
+		line(self.x,self.y,self.x+self.dx,self.y+self.dy,self.col)
+	end
+
+	return p
+end
+
+function explosion(_x,_y)
+	for _=1,20 do
+		local p=make_particle(_x,_y)
+		add(floating,p)
+	end
+end
 -->8
 -- title screen
 
 diff_txt={
 	"easy",
-	"standard",
+	"medium",
 	"hard"
 }
 
@@ -472,8 +536,8 @@ mode_txt={
 }
 
 menu_txt={
-	"new game",
-	"high scores"
+	"begin",
+	"records"
 }
 
 title_states={
@@ -553,13 +617,16 @@ function draw_title()
 	local tx=rtext(t,x)
 	printb(t,tx,y+54,6,0)
 
-	local x=0.4*screen
+	local start_x=x
 	local start_y=screen/2+20
-	for i=0,#txt_tbl[t_state]-1 do
-		local y=10*i+start_y
-		printb(txt_tbl[t_state][i+1],x,y,6,0)
-		if t_cursor==i then
-			printb(">",x-6,y,6,0)
+	for s=1,t_state do
+		local x=screen/3*(s-1)+start_x
+		for i=0,#txt_tbl[s]-1 do
+			local y=10*i+start_y
+			printb(txt_tbl[s][i+1],x,y,6,0)
+			if t_cursor==i and s==t_state then
+				printb(">",x-6,y,6,0)
+			end
 		end
 	end
 end
@@ -569,23 +636,23 @@ end
 default_hs={
 	-- points scores
 	-- easy
-	{100000,ord("a"),ord("s"),ord("b")},
-	{50000,ord("a"),ord("s"),ord("b")},
-	{25000,ord("a"),ord("s"),ord("b")},
-	{10000,ord("a"),ord("s"),ord("b")},
-	{2500,ord("a"),ord("s"),ord("b")},
+	{1000,ord("a"),ord("s"),ord("b")},
+	{500,ord("a"),ord("s"),ord("b")},
+	{250,ord("a"),ord("s"),ord("b")},
+	{100,ord("a"),ord("s"),ord("b")},
+	{50,ord("a"),ord("s"),ord("b")},
 -- medium
-	{100000,ord("a"),ord("s"),ord("b")},
-	{50000,ord("a"),ord("s"),ord("b")},
-	{25000,ord("a"),ord("s"),ord("b")},
-	{10000,ord("a"),ord("s"),ord("b")},
-	{2500,ord("a"),ord("s"),ord("b")},
+	{1000,ord("a"),ord("s"),ord("b")},
+	{500,ord("a"),ord("s"),ord("b")},
+	{250,ord("a"),ord("s"),ord("b")},
+	{100,ord("a"),ord("s"),ord("b")},
+	{50,ord("a"),ord("s"),ord("b")},
 -- hard
-	{100000,ord("a"),ord("s"),ord("b")},
-	{50000,ord("a"),ord("s"),ord("b")},
-	{25000,ord("a"),ord("s"),ord("b")},
-	{10000,ord("a"),ord("s"),ord("b")},
-	{2500,ord("a"),ord("s"),ord("b")},
+	{1000,ord("a"),ord("s"),ord("b")},
+	{500,ord("a"),ord("s"),ord("b")},
+	{250,ord("a"),ord("s"),ord("b")},
+	{100,ord("a"),ord("s"),ord("b")},
+	{50,ord("a"),ord("s"),ord("b")},
 	-- timed scores
 	-- easy
 	{300,ord("a"),ord("s"),ord("b")},
@@ -616,7 +683,30 @@ function update_hs()
 end
 
 function draw_hs()
+	local idx=game_mode==modes.timed and #default_hs/2 or 0
+	if game_diff==diffs.med then
+		idx+=#default_hs/6
+	elseif game_diff==diffs.hard then
+		idx+=#default_hs/3
+	end
 
+	printb("high scores",ctext("high scores"),10,6,0)
+	local start_x=20
+	local start_y=27
+	for i=1,5 do
+		local score=high_scores[idx+i]
+		local pts=score[1]
+		if game_mode==modes.timed then
+			pts=format_t(pts)
+		end
+
+		local y=start_y+10*(i-1)
+		printb(pts,start_x,y,6,0)
+		for j=2,4 do
+			local let=chr(score[j])
+			printb(let,start_x+screen/2+5*j,y,6,0)
+		end
+	end
 end
 
 function update_name_entry()
@@ -650,27 +740,28 @@ function save_score(_tbl,_idx)
 end
 
 function load_hs()
-	local esize=#default_hs[1]
+	local esize=4
 	if dget(0)==0 then
 		reset_hs()
 		return default_hs
 	else
 		scores={}
-		for i=1,#default_hs do
-			local idx=esize*i
+		for i=0,#default_hs-1 do
+			local idx=esize*i+1
 			local score={}
 			add(score,dget(idx))
 			for j=1,esize-1 do
 				add(score,dget(idx+j))
 			end
+			add(scores,score)
 		end
 		return scores
 	end
 end
 
-function is_hs(_tbl,_score,_is_timed)
-	local idx=_is_timed and #default_hs or #default_hs/2
-	return _val>_tbl[idx+1][1]
+function is_hs()
+	local idx=game_mode==modes.timed and #default_hs or #default_hs/2
+	return pts>high_scores[idx+1][1]
 end
 
 function add_score(_tbl,_score)
