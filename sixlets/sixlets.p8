@@ -13,7 +13,6 @@ board_size=(screen-2*board_margin)/8
 pts_digits=10
 timed_len=180 -- in sec
 max_score=0xffff
-a_ord=97
 
 modes={
 	score=1,
@@ -325,6 +324,7 @@ function gameover()
 	else
 		sfx(4)
 	end
+	add_score(high_scores,pts)
 end
 
 function update_floating()
@@ -340,12 +340,7 @@ function update_results()
 	update_floating()
 	if t()-start_time>5 then
 		if btnp(❎) then
-			if is_hs() then
-				_upd=update_name_entry()
-				_drw=draw_name_entry()
-			else
-				reset()
-			end
+			reset()
 		end
 	end
 end
@@ -437,7 +432,7 @@ function rtext(_t,_x)
 end
 
 function format_t(_t)
-	local minutes=""..flr(_t/60)
+	local minutes=""..(_t\60)
 	if #minutes==1 then
 		minutes="0"..minutes
 	end
@@ -635,43 +630,13 @@ end
 
 default_hs={
 	-- points scores
-	-- easy
-	{1000,ord("a"),ord("s"),ord("b")},
-	{500,ord("a"),ord("s"),ord("b")},
-	{250,ord("a"),ord("s"),ord("b")},
-	{100,ord("a"),ord("s"),ord("b")},
-	{50,ord("a"),ord("s"),ord("b")},
--- medium
-	{1000,ord("a"),ord("s"),ord("b")},
-	{500,ord("a"),ord("s"),ord("b")},
-	{250,ord("a"),ord("s"),ord("b")},
-	{100,ord("a"),ord("s"),ord("b")},
-	{50,ord("a"),ord("s"),ord("b")},
--- hard
-	{1000,ord("a"),ord("s"),ord("b")},
-	{500,ord("a"),ord("s"),ord("b")},
-	{250,ord("a"),ord("s"),ord("b")},
-	{100,ord("a"),ord("s"),ord("b")},
-	{50,ord("a"),ord("s"),ord("b")},
+	{1000,500,250},
+	{1000,500,250},
+	{1000,500,250},
 	-- timed scores
-	-- easy
-	{300,ord("a"),ord("s"),ord("b")},
-	{150,ord("a"),ord("s"),ord("b")},
-	{100,ord("a"),ord("s"),ord("b")},
-	{60,ord("a"),ord("s"),ord("b")},
-	{30,ord("a"),ord("s"),ord("b")},
--- medium
-	{300,ord("a"),ord("s"),ord("b")},
-	{150,ord("a"),ord("s"),ord("b")},
-	{100,ord("a"),ord("s"),ord("b")},
-	{60,ord("a"),ord("s"),ord("b")},
-	{30,ord("a"),ord("s"),ord("b")},
--- hard
-	{300,ord("a"),ord("s"),ord("b")},
-	{150,ord("a"),ord("s"),ord("b")},
-	{100,ord("a"),ord("s"),ord("b")},
-	{60,ord("a"),ord("s"),ord("b")},
-	{30,ord("a"),ord("s"),ord("b")},
+	{300,150,100},
+	{300,150,100},
+	{300,150,100},
 }
 
 function update_hs()
@@ -683,41 +648,38 @@ function update_hs()
 end
 
 function draw_hs()
-	local idx=game_mode==modes.timed and #default_hs/2 or 0
-	if game_diff==diffs.med then
-		idx+=#default_hs/6
-	elseif game_diff==diffs.hard then
-		idx+=#default_hs/3
-	end
-
-	printb("high scores",ctext("high scores"),10,6,0)
+	printb("high scores",ctext("high scores"),5,6,0)
+	-- diff_txt
 	local start_x=20
-	local start_y=27
-	for i=1,5 do
-		local score=high_scores[idx+i]
-		local pts=score[1]
-		if game_mode==modes.timed then
-			pts=format_t(pts)
-		end
+	local start_y=14
+	local mode_dy=screen/2-10
+	local diff_dx=screen/4
+	-- print mode labels
+	for i=1,#mode_txt do
+		local t=mode_txt[i]
+		printb(t,ctext(t),start_y+(i-1)*mode_dy,6,0)
+	end
 
-		local y=start_y+10*(i-1)
-		printb(pts,start_x,y,6,0)
-		for j=2,4 do
-			local let=chr(score[j])
-			printb(let,start_x+screen/2+5*j,y,6,0)
+	-- print diff mode labels
+	for i=0,2*#diff_txt-1 do
+		local t=diff_txt[(i%#diff_txt)+1]
+		local x=start_x+(i%#diff_txt)*diff_dx
+		local y=start_y+(i\#diff_txt)*mode_dy+10
+		printb(t,x,y,6,0)
+	end
+
+	for i=0,#default_hs-1 do
+		local x=start_x+(i%#diff_txt)*diff_dx
+		local y=start_y+(i\#diff_txt)*mode_dy+10
+		local scores=high_scores[i+1]
+		for j=1,#scores do
+			local t=scores[j]
+			if i>=#default_hs/2 then
+				t=format_t(t)
+			end
+			printb(t,x,y+j*8,6,0)
 		end
 	end
-end
-
-function update_name_entry()
-	if btnp(❎) then
-		reset()
-	end
-end
-
-function draw_name_entry()
-	cls()
-	print("this is the name entry screen. wow.",5,5,8)
 end
 
 function reset_hs()
@@ -726,16 +688,12 @@ function reset_hs()
 end
 
 function save_hs(_tbl)
-	for i=1,#_tbl do
-		save_score(_tbl[i],i)
-	end
-end
-
-function save_score(_tbl,_idx)
-	local e_size=#default_hs[1]
-	local f_idx=e_size*(_idx-1)
-	for i=1,e_size do
-		dset(f_idx+i,_tbl[i])
+	local idx=1
+	for scores in all(_tbl) do
+		for score in all(scores) do
+			dset(idx,score)
+			idx+=1
+		end
 	end
 end
 
@@ -746,12 +704,13 @@ function load_hs()
 		return default_hs
 	else
 		scores={}
-		for i=0,#default_hs-1 do
-			local idx=esize*i+1
-			local score={}
-			add(score,dget(idx))
-			for j=1,esize-1 do
-				add(score,dget(idx+j))
+		idx=1
+		for i=1,#default_hs do
+			score={}
+			for j=1,#default_hs[1] do
+				local s=dget(idx)
+				add(score,s)
+				idx+=1
 			end
 			add(scores,score)
 		end
@@ -760,32 +719,29 @@ function load_hs()
 end
 
 function is_hs()
-	local idx=game_mode==modes.timed and #default_hs or #default_hs/2
+	local idx=(game_mode==modes.timed) and 4 or 1
 	return pts>high_scores[idx+1][1]
 end
 
 function add_score(_tbl,_score)
-	local idx=game_mode==modes.timed and #default_hs/2 or 0
+	local idx=(game_mode==modes.timed) and 4 or 1
 	if game_diff==diffs.med then
-		idx+=#default_hs/6
+		idx+=1
 	elseif game_diff==diffs.hard then
-		idx+=#default_hs/3
+		idx+=2
 	end
 
-	local val=_score[1]
 	local hs_found=false
 	local tmp=nil
-	for i=1,#default_hs/6 do
-		local cur_hs=_tbl[idx+i]
-		if not hs_found then
-			if val>cur_hs[1] then
-				tmp=cur_hs
-				_tbl[idx+i]=_score
-				hs_found=true
-			end
-		else
-			_tbl[idx+i]=tmp
-			tmp=cur_hs
+	for i=1,#_tbl[idx] do
+		local s=_tbl[idx][i]
+		if _score>s and not hs_found then
+			hs_found=true
+			tmp=s
+			_tbl[idx][i]=_score
+		elseif hs_found then
+			_tbl[idx][i]=tmp
+			tmp=s
 		end
 	end
 
