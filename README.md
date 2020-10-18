@@ -19,6 +19,8 @@ https://lexaloffle.com/bbs/?uid=27259
     - A composition of the title theme from the *Final Fantasy* series
 - Game of Life
     - Conway's Game of Life done in Pico-8, complete with editor
+- Honeytrap
+    - A prototype game about a bee flying from flower to flower collecting pollen. Unfinished, but somewhat playable.
 - Huck Dunt
     - A demake of Duck Hunt done to fit in the length of two tweets (480 characters)
 - Icosahedron
@@ -32,7 +34,13 @@ https://lexaloffle.com/bbs/?uid=27259
     - A "3D" demo made in the style of *Wolfenstein 3D*.
 - Simon Says
     - A Simon Says clone made for another Tweet Jam.
+- Sixlets
+    - A puzzle game where you try to match like-colored tiles to clear them.
 - Snowman
     - A snowman themed puzzle game made while avoiding relatives at Christmas.
 - Starmoo Valley
     - A birthday gift to an online friend, full of weird in-jokes.
+
+## Misc.
+
+Also included is a modification of the Aseprite Pico-8 palette file which includes the 16 secret colors. Simply place the `pico8-ex-palette` folder along with the other Aseprite palettes to install.

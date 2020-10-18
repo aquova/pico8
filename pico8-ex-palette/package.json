@@ -1,0 +1,16 @@
+{
+  "name": "pico8-ex-palettes",
+  "displayName": "PICO-8 Extended Palette",
+  "description": "Palettes from PICO-8 created by Joseph White",
+  "version": "1.0",
+  "author": { "name": "Joseph White", "url": "http://www.pico-8.com/" },
+  "publisher": "aseprite",
+  "categories": [
+    "Palettes"
+  ],
+  "contributes": {
+    "palettes": [
+      { "id": "PICO-8-EX", "path": "./pico-8-ex.gpl" }
+    ]
+  }
+}
