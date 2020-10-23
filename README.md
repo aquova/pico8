@@ -26,6 +26,9 @@ https://lexaloffle.com/bbs/?uid=27259
 - Icosahedron
     - An early attempt of mine to learn 3D graphic theory
     - Also includes an attempt to make the N64 logo in my terrible, terrible 3D engine.
+- Pico-Chip
+    - A Chip-8 emulator for Pico-8
+    - Also includes `c8_to_p8.py`, a Python script which converts a Chip-8 binary into a .p8 file to be #include-ed for the emulator to run.
 - Piconian
     - My first game! A demake of the arcade game *Bosconian*
 - Rally-8
