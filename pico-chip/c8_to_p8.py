@@ -10,10 +10,13 @@ def main():
 
     with open(c8_file, "rb") as read_file, open(c8_base.lower() + ".p8", "w") as write_file:
         write_file.write("game={")
-        byte = read_file.read(1)
+        byte = read_file.read(2)
         while byte:
-            write_file.write('0x{:02x},'.format(ord(byte)))
-            byte = read_file.read(1)
+            if len(byte) == 2:
+                write_file.write('0x{:02x}{:02x},'.format(byte[0], byte[1]))
+            else:
+                write_file.write('0x{:02x}00,'.format(byte[0]))
+            byte = read_file.read(2)
 
         write_file.write("}")
 
