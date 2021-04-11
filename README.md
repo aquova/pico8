@@ -39,6 +39,8 @@ https://lexaloffle.com/bbs/?uid=27259
     - A Simon Says clone made for another Tweet Jam.
 - Sixlets
     - A puzzle game where you try to match like-colored tiles to clear them.
+- Sixlets 2
+    - A sequel to the first Sixlets, where you try to create a path through many same-colored tiles.
 - Snowman
     - A snowman themed puzzle game made while avoiding relatives at Christmas.
 - Starmoo Valley
