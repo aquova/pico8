@@ -209,7 +209,7 @@ function rnd_tile()
 	end
 
 	function t:reset_rotated()
-		self.start_dir=self.dir
+		self.dir=self.start_dir
 	end
 
 	function t:set_highlight(_h)
@@ -480,7 +480,6 @@ end
 function update_fall()
 	if streak==1 then
 		floating={}
-		reset_tiles()
 		sfx(4)
 	else
 		sfx(2)
@@ -491,8 +490,6 @@ function update_fall()
 			local empty={}
 			for y=board_size,1,-1 do
 				local t=grid[x][y]
-				t:set_checked(false)
-				t:reset_rotated()
 
 				if t:is_highlighted() then
 					-- remove tile
@@ -519,6 +516,7 @@ function update_fall()
 	rots=max_rot
 	np=0
 	streak=0
+	reset_tiles()
 	_upd=update_game
 	_drw=draw_game
 end
