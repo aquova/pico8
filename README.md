@@ -45,6 +45,8 @@ https://lexaloffle.com/bbs/?uid=27259
     - A snowman themed puzzle game made while avoiding relatives at Christmas.
 - Starmoo Valley
     - A birthday gift to an online friend, full of weird in-jokes.
+- Wordle
+    - A Pico-8 Wordle clone.
 
 ## Misc.
 
