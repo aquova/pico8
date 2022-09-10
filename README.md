@@ -31,6 +31,8 @@ https://lexaloffle.com/bbs/?uid=27259
     - Also includes `c8_to_p8.py`, a Python script which converts a Chip-8 binary into a .p8 file to be #include-ed for the emulator to run.
 - Piconian
     - My first game! A demake of the arcade game *Bosconian*
+- Quick Draw
+    - A demake of the Quick Draw mini-game from *Kirby's Adventure*, made for the Pico1k game jam.
 - Rally-8
     - An unfinished demake of the arcade game *Rally-X*. Playable, but not polished.
 - Raycaster
